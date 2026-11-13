@@ -111,10 +111,20 @@ create index if not exists underlines_book on underlines(book_id);
 create table if not exists settings (key text primary key, value text not null);
 -- Markdown files Nightstand wrote when exporting, so it never touches anyone else's
 create table if not exists exported_files (book_id integer primary key, path text not null);
+-- what was sent to which device, so its page can say which books came from the library
+create table if not exists sent (device text not null, path text not null, book_id integer not null references books(id) on delete cascade, at integer not null, primary key (device, path));
+-- highlights brought in from devices. underline_id is null once it's been taken back out, so it never comes back
+create table if not exists imported (key text primary key, underline_id integer, batch integer not null);
 ";
 
 // Columns added after the first version: (table, column, definition)
-const ADDED_COLUMNS: &[(&str, &str, &str)] = &[("underlines", "page", "integer"), ("underlines", "chapter", "text")];
+const ADDED_COLUMNS: &[(&str, &str, &str)] = &[
+    ("underlines", "page", "integer"),
+    ("underlines", "chapter", "text"),
+    // the AZW3 made for Kindles, kept so a book is only converted once, and its cover thumbnail
+    ("books", "azw3", "text"),
+    ("books", "azw3_thumb", "text"),
+];
 
 
 impl Library {
@@ -263,6 +273,73 @@ impl Library {
         let mut st = self.db.prepare("select key, value from settings").map_err(|e| e.to_string())?;
         let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(|e| e.to_string())?;
         rows.collect::<Result<_, _>>().map_err(|e| e.to_string())
+    }
+
+    pub fn azw3(&self, id: i64) -> Option<(String, Option<String>)> {
+        self.db.query_row("select azw3, azw3_thumb from books where id = ? and azw3 is not null", [id], |r| Ok((r.get(0)?, r.get(1)?))).optional().ok().flatten()
+    }
+
+    pub fn set_azw3(&self, id: i64, file: &str, thumb: Option<&str>) -> Result<(), String> {
+        self.exec("update books set azw3 = ?, azw3_thumb = ? where id = ?", params![file, thumb, id])
+    }
+
+    pub fn record_sent(&self, device: &str, path: &str, book_id: i64) -> Result<(), String> {
+        self.exec("insert or replace into sent (device, path, book_id, at) values (?, ?, ?, ?)", params![device, path, book_id, now()])
+    }
+
+    pub fn forget_sent(&self, device: &str, path: &str) -> Result<(), String> {
+        self.exec("delete from sent where device = ? and path = ?", params![device, path])
+    }
+
+    /// (path on device, book id) for everything sent to this device
+    pub fn sent_to(&self, device: &str) -> Result<Vec<(String, i64)>, String> {
+        let mut st = self.db.prepare("select path, book_id from sent where device = ?").map_err(|e| e.to_string())?;
+        let rows = st.query_map([device], |r| Ok((r.get(0)?, r.get(1)?))).map_err(|e| e.to_string())?;
+        rows.collect::<Result<_, _>>().map_err(|e| e.to_string())
+    }
+
+    pub fn imported_keys(&self) -> Result<std::collections::HashSet<String>, String> {
+        let mut st = self.db.prepare("select key from imported").map_err(|e| e.to_string())?;
+        let rows = st.query_map([], |r| r.get(0)).map_err(|e| e.to_string())?;
+        rows.collect::<Result<_, _>>().map_err(|e| e.to_string())
+    }
+
+    /// Add underlines brought in from a device as one batch, skipping any key already seen.
+    pub fn import(&self, batch: i64, items: &[(String, Underline)]) -> Result<Vec<Underline>, String> {
+        let seen = self.imported_keys()?;
+        let mut out = vec![];
+        for (key, u) in items {
+            if seen.contains(key) {
+                continue;
+            }
+            let u = self.add_underline(u)?;
+            self.exec("insert into imported (key, underline_id, batch) values (?, ?, ?)", params![key, u.id, batch])?;
+            out.push(u);
+        }
+        Ok(out)
+    }
+
+    /// Take a batch back out. The keys stay, so those highlights aren't brought in again.
+    pub fn undo_import(&self, batch: i64) -> Result<Vec<i64>, String> {
+        let mut st = self.db.prepare("select distinct u.book_id from imported i join underlines u on u.id = i.underline_id where i.batch = ?").map_err(|e| e.to_string())?;
+        let books: Vec<i64> = st.query_map([batch], |r| r.get(0)).map_err(|e| e.to_string())?.collect::<Result<_, _>>().map_err(|e| e.to_string())?;
+        self.exec("delete from underlines where id in (select underline_id from imported where batch = ?)", params![batch])?;
+        self.exec("update imported set underline_id = null where batch = ?", params![batch])?;
+        Ok(books)
+    }
+
+    /// A Kobo's position only moves a book forward: further along, or Finished. Returns the new status if it changed.
+    pub fn apply_progress(&self, id: i64, fraction: f64, finished: bool) -> Result<Option<String>, String> {
+        let b = self.book(id)?;
+        if finished && b.status != "Finished" {
+            self.exec("update books set status = 'Finished', fraction = max(fraction, ?) where id = ?", params![fraction, id])?;
+            return Ok(Some("Finished".into()));
+        }
+        if fraction > b.fraction + 0.001 && b.status != "Finished" {
+            self.exec("update books set fraction = ?, status = 'Reading' where id = ?", params![fraction, id])?;
+            return Ok((b.status != "Reading").then(|| "Reading".to_string()));
+        }
+        Ok(None)
     }
 
     pub fn set_section_chars(&self, id: i64, chars: &[u64]) -> Result<(), String> {

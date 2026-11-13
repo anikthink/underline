@@ -1,9 +1,11 @@
+mod devices;
 mod epub;
 mod library;
 mod notes;
 
 use library::{Added, Book, Library, Note, Underline};
 use std::path::PathBuf;
+
 use std::sync::Mutex;
 use tauri::{Emitter, Manager, State, ipc::Response};
 
@@ -139,6 +141,201 @@ fn open_settings(app: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+// ---------- Devices ----------
+
+fn device(id: &str) -> Result<devices::Device, String> {
+    devices::detect().into_iter().find(|d| d.id == id).ok_or_else(|| format!("{id} isn't connected"))
+}
+
+fn fold(s: &str) -> String {
+    s.chars().filter(|c| c.is_alphanumeric()).flat_map(char::to_lowercase).collect()
+}
+
+#[tauri::command]
+fn list_devices() -> Vec<devices::Device> {
+    devices::detect()
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeviceBook {
+    #[serde(flatten)]
+    on: devices::OnDevice,
+    /// The library book it is, if any: sent from here, or the same title
+    book_id: Option<i64>,
+}
+
+#[tauri::command]
+async fn device_contents(lib: Lib<'_>, id: String) -> Result<Vec<DeviceBook>, String> {
+    let dev = device(&id)?;
+    let lib = lib.lock().unwrap();
+    let sent = lib.sent_to(&dev.id)?;
+    let books = lib.books()?;
+    Ok(devices::contents(&dev)
+        .into_iter()
+        .map(|on| {
+            let book_id = sent.iter().find(|(p, _)| *p == on.path).map(|(_, b)| *b).or_else(|| {
+                let t = fold(&on.title);
+                books.iter().find(|b| !t.is_empty() && (fold(&b.title) == t || (t.len() > 12 && fold(&b.title).starts_with(&t)))).map(|b| b.id)
+            });
+            DeviceBook { on, book_id }
+        })
+        .collect())
+}
+
+#[derive(serde::Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct SendProgress {
+    device: String,
+    done: usize,
+    total: usize,
+    title: String,
+    step: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Sent {
+    book_id: i64,
+    title: String,
+    ok: bool,
+    detail: String,
+}
+
+/// Send books: as they are to a Kobo; as AZW3 to a Kindle, converting once and keeping the copy in the library.
+#[tauri::command]
+async fn send_to_device(app: tauri::AppHandle, lib: Lib<'_>, id: String, book_ids: Vec<i64>) -> Result<Vec<Sent>, String> {
+    let dev = device(&id)?;
+    let root = PathBuf::from(&dev.path);
+    let total = book_ids.len();
+    let mut out = vec![];
+    for (i, book_id) in book_ids.into_iter().enumerate() {
+        let (book, folder, cached) = {
+            let l = lib.lock().unwrap();
+            (l.book(book_id)?, l.folder.clone(), l.azw3(book_id))
+        };
+        let progress = |step: &str| {
+            let _ = app.emit("send-progress", SendProgress { device: dev.id.clone(), done: i, total, title: book.title.clone(), step: step.into() });
+        };
+        let res: Result<String, String> = (|| {
+            let name = notes::file_name(&book.title).trim_end_matches(".md").to_string();
+            if dev.kind == "kindle" {
+                let epub = folder.join(&book.file);
+                let mut have = cached.filter(|(f, _)| folder.join(f).is_file());
+                if have.is_none() {
+                    progress("Converting to AZW3");
+                    let rel = book.file.trim_end_matches(".epub").to_string() + ".azw3";
+                    let rep = devices::convert(&epub, &folder.join(&rel))?;
+                    lib.lock().unwrap().set_azw3(book_id, &rel, rep.thumb_file.as_deref())?;
+                    have = Some((rel, rep.thumb_file));
+                }
+                let (rel, thumb) = have.unwrap();
+                progress("Copying");
+                let dest = format!("documents/{name}.azw3");
+                std::fs::copy(folder.join(&rel), root.join(&dest)).map_err(|e| e.to_string())?;
+                // newer Kindles show a sideloaded book's cover only from system/thumbnails
+                if let Some(t) = thumb {
+                    let from = folder.join(&rel).parent().unwrap().join(&t);
+                    if from.is_file() {
+                        let _ = std::fs::create_dir_all(root.join("system/thumbnails"));
+                        let _ = std::fs::copy(&from, root.join("system/thumbnails").join(&t));
+                    }
+                }
+                lib.lock().unwrap().record_sent(&dev.id, &dest, book_id)?;
+                Ok("AZW3".into())
+            } else {
+                progress("Copying");
+                let dest = format!("Nightstand/{name}.epub");
+                std::fs::create_dir_all(root.join("Nightstand")).map_err(|e| e.to_string())?;
+                std::fs::copy(folder.join(&book.file), root.join(&dest)).map_err(|e| e.to_string())?;
+                lib.lock().unwrap().record_sent(&dev.id, &dest, book_id)?;
+                Ok("EPUB".into())
+            }
+        })();
+        out.push(match res {
+            Ok(detail) => Sent { book_id, title: book.title.clone(), ok: true, detail },
+            Err(detail) => Sent { book_id, title: book.title.clone(), ok: false, detail },
+        });
+    }
+    let _ = app.emit("send-progress", SendProgress { device: dev.id.clone(), done: total, total, title: String::new(), step: "Done".into() });
+    Ok(out)
+}
+
+#[tauri::command]
+fn remove_from_device(lib: Lib, id: String, path: String) -> Result<(), String> {
+    let dev = device(&id)?;
+    devices::remove(&dev, &path)?;
+    lib.lock().unwrap().forget_sent(&dev.id, &path)
+}
+
+#[tauri::command]
+fn eject_device(id: String) -> Result<(), String> {
+    devices::eject(&device(&id)?)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DeviceClip {
+    #[serde(flatten)]
+    clip: devices::Clip,
+    book_id: Option<i64>,
+}
+
+/// Highlights on the device that haven't been brought in before, each with the library book it belongs to
+#[tauri::command]
+async fn device_clips(lib: Lib<'_>, id: String) -> Result<Vec<DeviceClip>, String> {
+    let dev = device(&id)?;
+    let root = PathBuf::from(&dev.path);
+    let clips = if dev.kind == "kindle" { devices::kindle_clips(&root) } else { devices::kobo_clips(&root) };
+    let lib = lib.lock().unwrap();
+    let seen = lib.imported_keys()?;
+    let sent = lib.sent_to(&dev.id)?;
+    let books = lib.books()?;
+    Ok(clips
+        .into_iter()
+        .filter(|c| !seen.contains(&c.key))
+        .map(|clip| {
+            let by_path = clip.path.as_ref().and_then(|p| sent.iter().find(|(s, _)| s == p)).map(|(_, b)| *b);
+            let t = fold(&clip.title);
+            let by_title = || books.iter().find(|b| !t.is_empty() && (fold(&b.title) == t || fold(&b.title).starts_with(&t) || t.starts_with(&fold(&b.title)))).map(|b| b.id);
+            DeviceClip { book_id: by_path.or_else(by_title), clip }
+        })
+        .collect())
+}
+
+#[derive(serde::Deserialize)]
+struct ImportItem {
+    key: String,
+    underline: Underline,
+}
+
+#[tauri::command]
+fn import_underlines(lib: Lib, batch: i64, items: Vec<ImportItem>) -> Result<Vec<Underline>, String> {
+    let lib = lib.lock().unwrap();
+    let pairs: Vec<(String, Underline)> = items.into_iter().map(|i| (i.key, i.underline)).collect();
+    let added = lib.import(batch, &pairs)?;
+    let mut books: Vec<i64> = added.iter().map(|u| u.book_id).collect();
+    books.dedup();
+    for b in books {
+        notes::after_change(&lib, b);
+    }
+    Ok(added)
+}
+
+#[tauri::command]
+fn undo_import(lib: Lib, batch: i64) -> Result<(), String> {
+    let lib = lib.lock().unwrap();
+    for b in lib.undo_import(batch)? {
+        notes::after_change(&lib, b);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn apply_progress(lib: Lib, id: i64, fraction: f64, finished: bool) -> Result<Option<String>, String> {
+    lib.lock().unwrap().apply_progress(id, fraction, finished)
+}
+
 #[tauri::command]
 fn list_notes(lib: Lib) -> Result<Vec<Note>, String> {
     lib.lock().unwrap().notes()
@@ -187,6 +384,20 @@ pub fn run() {
             // covers are shown straight from the library folder
             app.asset_protocol_scope().allow_directory(folder.join(".nightstand/covers"), false)?;
             app.manage(Mutex::new(lib));
+            // watch for Kindles and Kobos being plugged in or removed
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                let mut last = devices::detect();
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    let now = devices::detect();
+                    let ids = |v: &Vec<devices::Device>| v.iter().map(|d| d.id.clone()).collect::<Vec<_>>();
+                    if ids(&now) != ids(&last) {
+                        let _ = handle.emit("devices-changed", &now);
+                    }
+                    last = now;
+                }
+            });
             #[cfg(debug_assertions)]
             if let Ok(path) = std::env::var("NIGHTSTAND_SELFTEST") {
                 let mut js = std::fs::read_to_string(&path)?;
@@ -220,6 +431,15 @@ pub fn run() {
             export_preview,
             open_settings,
             list_notes,
+            list_devices,
+            device_contents,
+            send_to_device,
+            remove_from_device,
+            eject_device,
+            device_clips,
+            import_underlines,
+            undo_import,
+            apply_progress,
             export_settings,
             set_export,
             dev_log,

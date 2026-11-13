@@ -3,6 +3,7 @@ import { openReader, closeReader, reader } from './reader.js'
 import { initNotes, loadNotes, notesCount, renderNotes, notesTools, notesKey, revisitCard, allNotes, focusNote, focusBook } from './notes.js'
 import { initPalette, openPalette, paletteOpen } from './palette.js'
 import { loadSettings, setting } from './store.js'
+import { initDevices, deviceSidebar, deviceFilter, deviceTools, renderDevice, connected } from './devices.js'
 
 const { invoke, convertFileSrc } = window.__TAURI__.core
 const $ = id => document.getElementById(id)
@@ -21,13 +22,16 @@ function render() {
   $('filters').innerHTML = ['All books', ...STATUSES].map(f =>
     `<button class="fl ${f === filter ? 'on' : ''}" data-f="${f}"><span>${f}</span><span class="n">${f === 'All books' ? books.length : counts[f]}</span></button>`).join('')
     + `<div class="fsep"></div><button class="fl ${filter === 'Notes' ? 'on' : ''}" data-f="Notes"><span>Notes</span><span class="n">${notesCount()}</span></button>`
-  $('heading').textContent = filter
-  const notes = filter === 'Notes'
-  if ($('tools').dataset.view !== (notes ? 'notes' : 'books')) {
-    $('tools').dataset.view = notes ? 'notes' : 'books'
-    $('tools').innerHTML = notes ? notesTools() : '<button id="add" class="btn">Add books…</button>'
+    + deviceSidebar(filter)
+  const dev = deviceFilter(filter), device = dev && connected().find(d => d.id === dev)
+  $('heading').textContent = device ? device.name : filter
+  const notes = filter === 'Notes', view = notes ? 'notes' : dev ? 'device:' + dev : 'books'
+  if ($('tools').dataset.view !== view) {
+    $('tools').dataset.view = view
+    $('tools').innerHTML = notes ? notesTools() : dev ? deviceTools(dev) : '<button id="add" class="btn">Add books…</button>'
   }
   if (notes) return renderNotes()
+  if (dev) return renderDevice(dev)
   if (!books.length) {
     $('shelf').innerHTML = `<div class="empty"><h2>No books yet</h2><p>Drop EPUB files anywhere in this window, or choose them. They're copied into your library folder; the originals stay where they are.</p><button class="btn pri" data-add>Add books…</button></div>`
     return
@@ -144,4 +148,5 @@ document.addEventListener('keydown', e => {
 await loadSettings()
 $('folder').textContent = (await invoke('library_folder')).replace(/^\/Users\/[^/]+/, '~')
 await load()
+initDevices({ filter: () => filter, go, render, books: () => books, toast, reload: load })
 if (setting('open_at') === 'book') { const last = books.filter(b => b.lastOpened).sort((a, b) => b.lastOpened - a.lastOpened)[0]; if (last) open(last.id) }

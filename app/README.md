@@ -29,15 +29,26 @@ Tauri 2, Mac first. A Rust core (`src-tauri/`) keeps the library; the window (`s
   - Changes apply straight away, in both windows. Settings are stored in the library database.
   - The four labels are fixed, and export is off until a folder is chosen.
 
+- **Devices:** a Kindle or Kobo plugged in over USB shows in the sidebar.
+  - **What's on it:** its page lists books from your library and books only on the device. Books bought from Amazon or Kobo are marked Protected.
+  - **Sending:** Send books… sends only what you choose. Kindles get AZW3, converted once by the bundled converter (`converter/`, from spikes/azw3) and kept next to the EPUB, with the cover thumbnail copied to `system/thumbnails`. Kobos get the EPUB in a `Nightstand` folder.
+  - **On connect, highlights come in as Quote underlines:** from a Kindle's My Clippings.txt (notes attached, extended highlights merged) or a Kobo's database (read from a copy, never written).
+  - **A Kobo's progress** only moves books forward.
+  - **What came in:** a banner says what arrived and can take it all back out; taken-out highlights don't come back. Each device can be set to Automatically, Ask first or Never.
+  - **Removing a book from a device** never touches the library. Eject is on the device's page.
+
 Not yet:
-- Devices (Settings says so) and Edit details.
+- Edit details.
+- **Repeated short highlights:** on the generated test file, 240 of 250 Kindle highlights land on the right words. The 10 misses are two- or three-word phrases that occur more than once. Reading the words around each one from the AZW3 on the Kindle fixed this in spikes/anchors (250 of 250) and is the next step.
+- **Kindle progress:** Kindles don't share reading positions for books sent over USB.
+- **Real devices:** this has been tested against pretend Kindle and Kobo folders, not real hardware.
 - Per-book Reader settings: the Reader's toolbar changes the defaults for now.
 - Moving the library folder.
 - Splitting very large book files. Books with a content file over 300 KB show a note that they may be slow.
 
 ## Running
 
-Needs Rust (`rustup`), Node and pnpm.
+Needs Rust (`rustup`), Node, pnpm and Go. Build the AZW3 converter once with `converter/build.sh` before running.
 
 ```
 pnpm install
@@ -58,6 +69,8 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
   - checks Notes;
   - removes its underline, prints a JSON report and quits.
 
+  `test/devices-selftest.js` does the same for Devices, with `NIGHTSTAND_VOLUMES` pointing at a folder of pretend devices (a `Kindle` folder with `documents/`, `system/` and a My Clippings.txt, and a `KOBOeReader` folder with `.kobo/KoboReader.sqlite`).
+
   With `NIGHTSTAND_EXPORT_TEST=/some/empty/folder`, it also exports there and checks that removing the underline removes the file.
 
   This only works in debug builds.
@@ -74,5 +87,6 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
 - `src/palette.js` is ⌘K.
 - `src/settings.html` and `src/settings.js` are the Settings window.
 - `src/store.js` holds settings shared between the windows.
+- `src/devices.js` and `src-tauri/src/devices.rs` are Devices. `converter/` is the EPUB-to-AZW3 helper.
 - `src-tauri/src/notes.rs` handles Markdown export.
 - `src/vendor/foliate-js` is foliate-js (MIT), with one small patch described in its `NIGHTSTAND.md`.

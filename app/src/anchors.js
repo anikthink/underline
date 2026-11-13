@@ -39,3 +39,31 @@ export async function findQuote(book, { exact, prefix, suffix }, preferIndex) {
   range.setStart(X.nodes[h], X.offs[h]); range.setEnd(X.nodes[e], X.offs[e] + 1)
   return { index, range }
 }
+
+// ---------- Highlights from a device (spikes/anchors, part two) ----------
+// The whole book folded once; each highlight is found by its text, and when it occurs more than once,
+// the occurrence nearest the device's position wins (a Kindle location, or a Kobo chapter file).
+export async function indexBook(book) {
+  const secs = []
+  let total = 0
+  for (const [i, s] of book.sections.entries()) {
+    if (!s.createDocument || s.linear === 'no') { secs.push(null); continue }
+    const doc = await s.createDocument(), X = indexDoc(doc)
+    secs.push({ i, doc, X, start: total, href: s.id ?? '' }); total += X.F.length
+  }
+  return { secs: secs.filter(Boolean), total, bytes: book.sections.reduce((a, s) => a + (s.size ?? 0), 0) }
+}
+
+// at: { frac } (0–1 through the book) or { file } (a chapter file name). Returns { index, range, count } or null.
+export function matchClip(ix, text, at = {}) {
+  const q = fold(text); if (!q) return null
+  const hits = []
+  for (const s of ix.secs) for (let h = s.X.F.indexOf(q); h >= 0; h = s.X.F.indexOf(q, h + 1)) hits.push([s, h])
+  if (!hits.length) return null
+  const dist = ([s, h]) => at.file ? (s.href.endsWith(at.file) || at.file.endsWith(s.href) ? 0 : 1) + h / 1e9
+    : at.frac != null ? Math.abs((s.start + h) / ix.total - at.frac) : 0
+  const [s, h] = hits.reduce((a, b) => dist(b) < dist(a) ? b : a)
+  const e = h + q.length - 1, range = s.doc.createRange()
+  range.setStart(s.X.nodes[h], s.X.offs[h]); range.setEnd(s.X.nodes[e], s.X.offs[e] + 1)
+  return { index: s.i, range, count: hits.length }
+}

@@ -192,3 +192,33 @@ label.frow { flex-wrap: wrap; }
 .pempty { padding: 18px; color: var(--mu); text-align: center; }
 .pal-foot { display: flex; gap: 14px; padding: 7px 14px; border-top: 1px solid var(--ln); color: var(--fa); font-size: 11px; }
 .pal-bg.dark .pal { --panel: #1c1d21; --tx: #ecedee; --mu: #8a8f98; --fa: #62666d; --ln: rgba(255,255,255,.07); --ln2: rgba(255,255,255,.11); --sel: rgba(255,255,255,.07); --prog: #f2c94c; --ac: #7c85e0; color-scheme: dark; }
+
+/* ---------- Devices ---------- */
+.fhead { font-size: 11px; color: var(--fa); font-weight: 600; padding: 2px 10px 4px; }
+.dev { max-width: 860px; margin: 0 auto; padding-bottom: 30px; }
+.dhead { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 18px 0 10px; }
+.dhead h2 { margin: 0; font-size: 18px; }
+.dhead small { color: var(--mu); }
+.dset { color: var(--mu); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.dset select { border: 1px solid var(--ln2); border-radius: 6px; background: var(--panel); padding: 2px 4px; }
+.dbanner { display: flex; justify-content: space-between; align-items: center; gap: 14px; background: var(--raise); border: 1px solid var(--ln); border-radius: 10px; padding: 11px 14px; margin: 10px 0; }
+.dbanner > span:first-child { flex: 1; }
+.dbanner .bar { width: 160px; height: 4px; background: var(--ln); border-radius: 2px; overflow: hidden; }
+.dbanner .bar i { display: block; height: 100%; background: var(--ac); }
+.drow { display: grid; grid-template-columns: 34px 1fr auto auto; gap: 14px; align-items: center; padding: 8px 10px; border-radius: 8px; }
+.drow:hover { background: var(--hv); }
+.dcv { width: 34px; height: 50px; object-fit: cover; border-radius: 2px; box-shadow: 0 0 0 1px var(--ln); }
+.dcv.ph { background: var(--raise); }
+.dt { display: flex; flex-direction: column; min-width: 0; }
+.dt small { color: var(--mu); font-size: 12px; }
+.dfmt { color: var(--fa); font-size: 12px; }
+.dprot { font-size: 11px; color: var(--mu); border: 1px solid var(--ln2); border-radius: 99px; padding: 1px 8px; }
+.drm { visibility: hidden; }
+.drow:hover .drm { visibility: visible; }
+.dempty { color: var(--mu); padding: 10px; }
+.sheet.wide { width: 560px; }
+.slist { max-height: 340px; overflow: auto; border-top: 1px solid var(--ln); margin-top: 6px; }
+.srow { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--ln); }
+.srow span { display: flex; flex-direction: column; }
+.srow small { color: var(--mu); font-size: 12px; }
+.scount { color: var(--mu); align-self: center; }
