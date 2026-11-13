@@ -50,7 +50,7 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
 ## Tests
 
 - **Rust:** `cd src-tauri && cargo test` covers EPUB metadata, adding books, and underlines saved across reopening. The book tests use the Gutenberg files in `spikes/azw3/books` when they're there.
-- **The window in a browser:** serve the repo root with `python3 -m http.server`, then open `/app/test/harness.html?fresh`. A stand-in replaces the Rust side.
+- **The window in a browser:** serve the repo root with `python3 -m http.server`, then open `/app/test/harness.html?fresh` (add `&page=settings` for the Settings window). A stand-in replaces the Rust side.
 - **The real app:** `NIGHTSTAND_SELFTEST=test/selftest.js src-tauri/target/debug/nightstand` runs `test/selftest.js` in the window. It:
   - opens Middlemarch;
   - underlines with key 1;
