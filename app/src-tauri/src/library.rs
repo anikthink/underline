@@ -618,7 +618,7 @@ mod tests {
         let Added::Added { book } = lib.add(&books.join("pg145.epub")) else { panic!("not added") };
         assert_eq!(book.title, "Middlemarch");
         assert_eq!(book.file, "George Eliot/Middlemarch.epub");
-        assert!(book.cover.as_ref().is_some_and(|c| Path::new(c).exists()));
+        assert!(book.cover.as_ref().is_some_and(|c| Path::new(c.split('#').next().unwrap()).exists()));
         assert!(matches!(lib.add(&books.join("pg145.epub")), Added::AlreadyThere { .. }));
         assert!(matches!(lib.add(&tmp.path().join("nope.epub")), Added::Failed { .. }));
 
