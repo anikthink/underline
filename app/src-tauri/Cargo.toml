@@ -28,6 +28,7 @@ dirs = "6"
 tempfile = "3"
 libc = "0.2"
 unicode-normalization = "0.1"
+regex = "1"
 
 
 [profile.release]

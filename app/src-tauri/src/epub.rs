@@ -13,6 +13,15 @@ pub struct Meta {
     pub cover: Option<Vec<u8>>,
     /// Size in bytes of the largest content file. Over about 300 KB, WebKit gets slow (spikes/pages).
     pub largest_file: u64,
+    pub publisher: Option<String>,
+    pub date: Option<String>,
+    pub description: Option<String>,
+    pub isbn: Option<String>,
+    pub series: Option<String>,
+    pub series_index: Option<String>,
+    /// Paths inside the zip, for rewriting (opf.rs)
+    pub opf_path: String,
+    pub cover_path: Option<String>,
 }
 
 const OPF_NS: &str = "http://www.idpf.org/2007/opf";
@@ -42,11 +51,46 @@ pub fn read<R: Read + Seek>(reader: R) -> Result<Meta, String> {
             .filter(|s| !s.is_empty())
             .collect()
     };
+    let meta_named = |name: &str| {
+        doc.descendants().find(|n| n.has_tag_name("meta") && n.attribute("name") == Some(name)).and_then(|n| n.attribute("content")).map(str::to_string)
+    };
+    // EPUB 3 series: <meta property="belongs-to-collection" id="c">Name</meta> + <meta refines="#c" property="group-position">
+    let collection = doc.descendants().find(|n| n.has_tag_name("meta") && n.attribute("property") == Some("belongs-to-collection"));
+    let group_position = collection.and_then(|c| c.attribute("id")).and_then(|id| {
+        doc.descendants()
+            .find(|n| n.has_tag_name("meta") && n.attribute("property") == Some("group-position") && n.attribute("refines") == Some(&format!("#{id}")))
+            .and_then(|n| n.text())
+            .map(str::to_string)
+    });
+    let isbn = dc("identifier").into_iter().find_map(|id| {
+        let digits: String = id.chars().filter(|c| c.is_ascii_digit() || *c == 'X').collect();
+        ((digits.len() == 13 && (digits.starts_with("978") || digits.starts_with("979"))) || (digits.len() == 10 && id.to_lowercase().contains("isbn"))).then_some(digits)
+    });
+    let strip = |s: String| {
+        let mut out = String::new();
+        let mut tag = false;
+        for c in s.chars() {
+            match c {
+                '<' => tag = true,
+                '>' => tag = false,
+                c if !tag => out.push(c),
+                _ => {}
+            }
+        }
+        out.split_whitespace().collect::<Vec<_>>().join(" ")
+    };
     let mut meta = Meta {
         title: dc("title").into_iter().next().unwrap_or_default(),
         authors: dc("creator"),
         language: dc("language").into_iter().next(),
         identifier: dc("identifier").into_iter().next(),
+        publisher: dc("publisher").into_iter().next(),
+        date: dc("date").into_iter().next(),
+        description: dc("description").into_iter().next().map(strip),
+        isbn,
+        series: meta_named("calibre:series").or_else(|| collection.and_then(|n| n.text()).map(|t| t.trim().to_string())),
+        series_index: meta_named("calibre:series_index").or(group_position),
+        opf_path: opf_path.clone(),
         ..Default::default()
     };
 
@@ -69,6 +113,7 @@ pub fn read<R: Read + Seek>(reader: R) -> Result<Meta, String> {
         });
     if let Some(item) = cover_item {
         meta.cover = read_bytes(&mut zip, &href(item)).ok();
+        meta.cover_path = Some(href(item));
     }
 
     for item in &items {

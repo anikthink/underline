@@ -28,6 +28,8 @@ pub struct Book {
     pub section_chars: Option<Vec<u64>>,
     pub largest_file: u64,
     pub last_opened: Option<i64>,
+    /// Series, publisher, shelves, rating and so on, as JSON (see details()); null until first edited
+    pub details: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -124,6 +126,7 @@ const ADDED_COLUMNS: &[(&str, &str, &str)] = &[
     // the AZW3 made for Kindles, kept so a book is only converted once, and its cover thumbnail
     ("books", "azw3", "text"),
     ("books", "azw3_thumb", "text"),
+    ("books", "details", "text"),
 ];
 
 
@@ -144,8 +147,9 @@ impl Library {
         Ok(Self { folder: folder.to_path_buf(), db })
     }
 
+    /// ~/Books/Nightstand, or NIGHTSTAND_LIBRARY for tests
     pub fn default_folder() -> PathBuf {
-        dirs::home_dir().unwrap_or_default().join("Books/Nightstand")
+        std::env::var_os("NIGHTSTAND_LIBRARY").map(PathBuf::from).unwrap_or_else(|| dirs::home_dir().unwrap_or_default().join("Books/Nightstand"))
     }
 
     fn cover_path(&self, id: i64) -> PathBuf {
@@ -234,13 +238,19 @@ impl Library {
             authors: serde_json::from_str(&r.get::<_, String>(2)?).unwrap_or_default(),
             file: r.get(3)?,
             added: r.get(4)?,
-            cover: has_cover.then(|| self.cover_path(id).to_string_lossy().into_owned()),
+            // the image's modified time is added to its address, so a new cover shows straight away
+            cover: has_cover.then(|| {
+                let p = self.cover_path(id);
+                let v = std::fs::metadata(&p).and_then(|m| m.modified()).ok().and_then(|t| t.duration_since(UNIX_EPOCH).ok()).map(|d| d.as_millis()).unwrap_or(0);
+                format!("{}#{v}", p.to_string_lossy())
+            }),
             status: r.get(6)?,
             fraction: r.get(7)?,
             position: r.get(8)?,
             section_chars: r.get::<_, Option<String>>(9)?.and_then(|s| serde_json::from_str(&s).ok()),
             largest_file: r.get::<_, i64>(10)? as u64,
             last_opened: r.get(11)?,
+            details: r.get::<_, Option<String>>(12)?.and_then(|s| serde_json::from_str(&s).ok()),
         })
     }
 
@@ -340,6 +350,107 @@ impl Library {
             return Ok((b.status != "Reading").then(|| "Reading".to_string()));
         }
         Ok(None)
+    }
+
+    // ---------- Edit details ----------
+
+    /// A book's details, read from its file the first time
+    pub fn details(&self, id: i64) -> Result<Book, String> {
+        let b = self.book(id)?;
+        if b.details.is_some() {
+            return Ok(b);
+        }
+        let m = epub::read(std::fs::File::open(self.folder.join(&b.file)).map_err(|e| e.to_string())?)?;
+        let d = serde_json::json!({
+            "series": m.series, "seriesIndex": m.series_index, "published": m.date.map(|d| d.chars().take(10).collect::<String>()),
+            "publisher": m.publisher, "language": m.language, "isbn": m.isbn, "description": m.description,
+            "shelves": [], "rating": 0, "sources": {}, "pending": false,
+        });
+        self.exec("update books set details = ? where id = ?", params![d.to_string(), id])?;
+        self.book(id)
+    }
+
+    /// Save as you type: the database now, the book's file when the panel lets go of it (commit_details).
+    pub fn update_details(&self, id: i64, title: &str, authors: &[String], details: &serde_json::Value) -> Result<(), String> {
+        let mut d = details.clone();
+        d["pending"] = serde_json::Value::Bool(true);
+        // a cover chosen since the window last read the details mustn't be forgotten by this save
+        if self.book(id)?.details.is_some_and(|old| old["newCover"] == true) {
+            d["newCover"] = true.into();
+        }
+        let title = if title.trim().is_empty() { "Untitled" } else { title.trim() };
+        self.exec("update books set title = ?, authors = ?, details = ? where id = ?", params![title, serde_json::to_string(authors).unwrap(), d.to_string(), id])
+    }
+
+    /// Use an image as the book's cover: the thumbnail changes now, the file's cover on commit.
+    pub fn set_cover(&self, id: i64, image: &Path) -> Result<(), String> {
+        let bytes = std::fs::read(image).map_err(|e| e.to_string())?;
+        save_thumbnail(&bytes, &self.cover_path(id))?;
+        let pending = self.folder.join(format!(".nightstand/covers/{id}-new"));
+        std::fs::write(&pending, &bytes).map_err(|e| e.to_string())?;
+        let b = self.details(id)?;
+        let mut d = b.details.unwrap_or_default();
+        d["pending"] = true.into();
+        d["newCover"] = true.into();
+        self.exec("update books set has_cover = 1, details = ? where id = ?", params![d.to_string(), id])
+    }
+
+    /// Write pending details into the EPUB, move it to Author/Title.epub if those changed,
+    /// and drop the Kindle copy so the next send has the new details.
+    pub fn commit_details(&self, id: i64) -> Result<Book, String> {
+        let b = self.book(id)?;
+        let Some(mut d) = b.details.clone().filter(|d| d["pending"] == true) else { return Ok(b) };
+        let s = |k: &str| d[k].as_str().map(str::to_string).filter(|v| !v.trim().is_empty());
+        let fd = crate::opf::FileDetails {
+            title: b.title.clone(),
+            authors: b.authors.clone(),
+            language: s("language"),
+            publisher: s("publisher"),
+            published: s("published"),
+            description: s("description"),
+            isbn: s("isbn"),
+            series: s("series"),
+            series_index: d["seriesIndex"].as_str().map(str::to_string).or_else(|| d["seriesIndex"].as_f64().map(|n| n.to_string())),
+        };
+        let old = self.folder.join(&b.file);
+        let pending_cover = self.folder.join(format!(".nightstand/covers/{id}-new"));
+        let cover = (d["newCover"] == true).then(|| std::fs::read(&pending_cover).ok()).flatten();
+        let bytes = crate::opf::rewrite(&std::fs::read(&old).map_err(|e| e.to_string())?, &fd, cover.as_deref())?;
+        // Author/Title.epub, moving it if the title or first author changed
+        let author = b.authors.first().cloned().unwrap_or_else(|| "Unknown author".into());
+        let dir = safe_name(&author);
+        let mut rel = format!("{dir}/{}.epub", safe_name(&b.title));
+        if rel != b.file {
+            let mut n = 2;
+            while self.folder.join(&rel).exists() {
+                rel = format!("{dir}/{} ({n}).epub", safe_name(&b.title));
+                n += 1;
+            }
+        }
+        std::fs::create_dir_all(self.folder.join(&dir)).map_err(|e| e.to_string())?;
+        let tmp = self.folder.join(format!("{rel}.saving"));
+        std::fs::write(&tmp, &bytes).map_err(|e| e.to_string())?;
+        std::fs::rename(&tmp, self.folder.join(&rel)).map_err(|e| e.to_string())?;
+        if rel != b.file {
+            let _ = std::fs::remove_file(&old);
+            if let Some(parent) = old.parent() {
+                let _ = std::fs::remove_dir(parent); // only if it's now empty
+            }
+        }
+        if let Some((azw3, thumb)) = self.azw3(id) {
+            let _ = std::fs::remove_file(self.folder.join(&azw3));
+            if let Some(t) = thumb {
+                let _ = std::fs::remove_file(self.folder.join(&azw3).with_file_name(t));
+            }
+        }
+        let _ = std::fs::remove_file(&pending_cover);
+        d["pending"] = false.into();
+        d["newCover"] = false.into();
+        self.exec(
+            "update books set file = ?, details = ?, azw3 = null, azw3_thumb = null, section_chars = null where id = ?",
+            params![rel, d.to_string(), id],
+        )?;
+        self.book(id)
     }
 
     pub fn set_section_chars(&self, id: i64, chars: &[u64]) -> Result<(), String> {
@@ -463,7 +574,7 @@ fn row_to_underline(r: &rusqlite::Row) -> rusqlite::Result<Underline> {
     })
 }
 
-const BOOK_SELECT: &str = "select id, title, authors, file, added, has_cover, status, fraction, position, section_chars, largest_file, last_opened from books";
+const BOOK_SELECT: &str = "select id, title, authors, file, added, has_cover, status, fraction, position, section_chars, largest_file, last_opened, details from books";
 
 /// A file or folder name that is safe on macOS and readable: no slashes or colons, not hidden, not too long.
 fn safe_name(s: &str) -> String {
@@ -541,5 +652,34 @@ mod tests {
         assert_eq!((notes[0].title.as_str(), notes[0].underline.id), ("Middlemarch", u.id));
         lib.remove_underline(u.id).unwrap();
         assert!(lib.underlines(book.id).unwrap().is_empty());
+    }
+}
+
+#[cfg(test)]
+mod details_tests {
+    use super::*;
+
+    #[test]
+    fn edits_are_written_into_the_file_and_it_moves() {
+        let books = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../../spikes/azw3/books"));
+        if !books.exists() {
+            return;
+        }
+        let tmp = tempfile::tempdir().unwrap();
+        let lib = Library::open(tmp.path()).unwrap();
+        let Added::Added { book } = lib.add(&books.join("pg11.epub")) else { panic!() };
+        let b = lib.details(book.id).unwrap();
+        let mut d = b.details.unwrap();
+        assert_eq!(d["language"], "en");
+        d["series"] = "Alice".into();
+        d["seriesIndex"] = "1".into();
+        d["shelves"] = serde_json::json!(["Childhood"]);
+        lib.update_details(book.id, "Alice in Wonderland", &["Lewis Carroll".into()], &d).unwrap();
+        let b = lib.commit_details(book.id).unwrap();
+        assert_eq!(b.file, "Lewis Carroll/Alice in Wonderland.epub");
+        assert!(!tmp.path().join(&book.file).exists());
+        let m = epub::read(std::fs::File::open(tmp.path().join(&b.file)).unwrap()).unwrap();
+        assert_eq!((m.title.as_str(), m.series.as_deref()), ("Alice in Wonderland", Some("Alice")));
+        assert_eq!(b.details.unwrap()["pending"], false);
     }
 }

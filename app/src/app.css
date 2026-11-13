@@ -222,3 +222,29 @@ label.frow { flex-wrap: wrap; }
 .srow span { display: flex; flex-direction: column; }
 .srow small { color: var(--mu); font-size: 12px; }
 .scount { color: var(--mu); align-self: center; }
+
+/* ---------- Edit details ---------- */
+#library.with-details { grid-template-columns: 220px 1fr 400px; }
+.dpanel { background: var(--panel); border-left: 1px solid var(--ln); overflow: auto; padding: 46px 20px 16px; display: flex; flex-direction: column; gap: 12px; -webkit-user-select: text; user-select: text; }
+.dp-head { display: grid; grid-template-columns: 96px 1fr; gap: 14px; }
+.dp-cover { border: 0; padding: 0; background: var(--raise); border-radius: 3px; aspect-ratio: 2/3; overflow: hidden; box-shadow: 0 0 0 1px var(--ln); color: var(--mu); font-size: 11px; }
+.dp-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dp-cover:hover { box-shadow: 0 0 0 2px var(--ac); }
+.dp-main { display: flex; flex-direction: column; gap: 4px; }
+.dp-l { font-size: 11px; color: var(--mu); font-weight: 500; display: flex; gap: 4px; align-items: center; margin-top: 4px; }
+.dp-l i { font-style: normal; color: var(--ac); }
+.dpanel input, .dpanel textarea, .dpanel select { font: inherit; color: var(--tx); background: var(--bg); border: 1px solid var(--ln2); border-radius: 6px; padding: 5px 8px; width: 100%; outline: none; resize: vertical; }
+.dpanel textarea[data-f="title"] { font: 600 15px/1.3 -apple-system, system-ui; }
+.dpanel input:focus, .dpanel textarea:focus { border-color: var(--ac); }
+.dp-row { display: flex; align-items: center; gap: 10px; }
+.dp-row select { width: auto; }
+.dp-row .dp-l { margin: 0; }
+.dp-stars { margin-left: auto; }
+.dp-stars button { border: 0; background: none; color: var(--ln2); font-size: 16px; padding: 0 1px; }
+.dp-stars button.on { color: var(--prog); }
+.dp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; }
+.dp-f.wide { grid-column: 1 / -1; }
+.dp-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; color: var(--mu); font-size: 12px; border-top: 1px solid var(--ln); padding-top: 10px; }
+.dp-foot kbd { font: 11px ui-monospace, Menlo, monospace; color: var(--fa); }
+.bk-edit { position: absolute; top: 6px; right: 6px; font-size: 11px; background: rgba(0,0,0,.6); color: #fff; border-radius: 5px; padding: 2px 7px; opacity: 0; transition: opacity .1s; }
+.bk:hover .bk-edit { opacity: 1; }

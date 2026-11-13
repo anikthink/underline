@@ -111,7 +111,7 @@ export function renderDevice(id) {
   else if (b) banner = `<div class="dbanner"><span>${esc(summary(b)[0].toUpperCase() + summary(b).slice(1))}.${b.leftOut ? ` ${plural(b.leftOut, 'passage')} from ${plural(b.leftOutTitles.length, 'book')} not in your library ${b.leftOut === 1 ? 'was' : 'were'} left out.` : ''}${b.notFound ? ` ${plural(b.notFound, 'highlight')} couldn't be placed in the book's text.` : ''}</span>
     <span>${b.added ? `<button class="lnk" data-dev="notes">See in Notes</button><button class="lnk" data-dev="undo">Take them back out</button>` : ''}</span></div>`
   const row = (x, lib) => `<div class="drow" data-path="${esc(x.path)}">
-    ${lib && lib.cover ? `<img class="dcv" src="${window.__TAURI__.core.convertFileSrc(lib.cover)}" alt="">` : `<div class="dcv ph"></div>`}
+    ${lib && lib.cover ? `<img class="dcv" src="${window.__TAURI__.core.convertFileSrc(lib.cover.split('#')[0])}" alt="">` : `<div class="dcv ph"></div>`}
     <div class="dt"><b>${esc(lib?.title ?? x.title)}</b><small>${esc(lib?.authors?.join(', ') ?? x.author ?? '')}${x.progress != null && x.progress > 0 ? ` · ${Math.round(x.progress * 100)}% on the ${esc(d.name)}` : ''}${x.finished ? ' · finished' : ''}</small></div>
     <span class="dfmt">${esc(x.format)}${x.bytes ? ` · ${gb(x.bytes)}` : ''}</span>
     ${x.protected ? `<span class="dprot" title="Bought from ${d.kind === 'kindle' ? 'Amazon' : 'Kobo'}, so it can't be copied in">Protected</span>` : `<button class="lnk drm" data-dev="remove">Remove from ${esc(d.name)}</button>`}

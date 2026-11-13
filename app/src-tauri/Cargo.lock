@@ -2274,6 +2274,7 @@ dependencies = [
  "dirs 6.0.0",
  "image",
  "libc",
+ "regex",
  "roxmltree",
  "rusqlite",
  "serde",

@@ -69,6 +69,7 @@ function bookActions(b) {
   return [
     { t: b.status === 'Not started' ? 'Start reading' : 'Open', k: '↵', run: () => H.openBook(b.id) },
     ...['Reading', 'Not started', 'Finished'].filter(s => s !== b.status).map(st),
+    { t: 'Edit details', k: '⌘I', run: () => H.editDetails(b.id) },
     { t: 'Underlines in Notes', run: () => H.notesFor(b.id) },
     { t: 'Show in Finder', run: () => H.reveal(b.id) },
   ].map(x => ({ ...x, kind: 'cmd' }))

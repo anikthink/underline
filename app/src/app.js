@@ -3,6 +3,7 @@ import { openReader, closeReader, reader } from './reader.js'
 import { initNotes, loadNotes, notesCount, renderNotes, notesTools, notesKey, revisitCard, allNotes, focusNote, focusBook } from './notes.js'
 import { initPalette, openPalette, paletteOpen } from './palette.js'
 import { loadSettings, setting } from './store.js'
+import { initDetails, openDetails, detailsKey, detailsOpen, detailsBook } from './details.js'
 import { initDevices, deviceSidebar, deviceFilter, deviceTools, renderDevice, connected } from './devices.js'
 
 const { invoke, convertFileSrc } = window.__TAURI__.core
@@ -10,6 +11,8 @@ const $ = id => document.getElementById(id)
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 
 const STATUSES = ['Reading', 'Not started', 'Finished']
+// covers come as "path#version"; the version goes in the query so a changed cover isn't served from cache
+export const coverSrc = c => { const [p, v] = c.split('#'); return `${convertFileSrc(p)}?v=${v ?? ''}` }
 let books = [], filter = 'All books'
 
 async function load() {
@@ -50,8 +53,8 @@ function render() {
 
 const card = b => `
   <button class="bk" data-id="${b.id}" title="${esc(b.title)}">
-    <div class="cv">${b.cover ? `<img src="${convertFileSrc(b.cover)}?v=${b.added}" alt="" loading="lazy">` : `<div class="ph">${esc(b.title)}<small>${esc(b.authors[0])}</small></div>`}
-      ${b.fraction > 0 ? `<div class="pr" style="width:${Math.round(b.fraction * 100)}%"></div>` : ''}</div>
+    <div class="cv">${b.cover ? `<img src="${coverSrc(b.cover)}" alt="" loading="lazy">` : `<div class="ph">${esc(b.title)}<small>${esc(b.authors[0])}</small></div>`}
+      ${b.fraction > 0 ? `<div class="pr" style="width:${Math.round(b.fraction * 100)}%"></div>` : ''}<span class="bk-edit" data-edit="${b.id}" role="button" title="Edit details (⌘I)">Edit</span></div>
     <div class="t">${esc(b.title)}</div><div class="a">${esc(b.authors.join(', ') || 'Unknown author')}</div>
   </button>`
 
@@ -86,7 +89,8 @@ async function chooseFiles() {
 document.addEventListener('click', e => {
   const f = e.target.closest('[data-f]'); if (f) { filter = f.dataset.f; render() }
   if (e.target.closest('#add, [data-add]')) chooseFiles()
-  const b = e.target.closest('.bk[data-id]'); if (b) open(+b.dataset.id)
+  const ed = e.target.closest('[data-edit]'); if (ed) return openDetails(+ed.dataset.edit)
+  const b = e.target.closest('.bk[data-id]'); if (b) detailsOpen() ? openDetails(+b.dataset.id) : open(+b.dataset.id)
 })
 
 async function open(id, target) {
@@ -120,6 +124,7 @@ initPalette({
   exportNotes: () => { go('Notes'); setTimeout(() => document.querySelector('[data-export="folder"]')?.click(), 50) },
   notesAt: id => { go('Notes'); focusNote(id); render() },
   notesFor: id => { go('Notes'); focusBook(id); render() },
+  editDetails: async id => { if (!$('reader').hidden) await back(); openDetails(id) },
   setStatus: async (id, status) => { await invoke('set_status', { id, status }); await load(); toast(`Marked ${books.find(b => b.id === id)?.title} as ${status}.`) },
   reveal: async id => { const b = books.find(b => b.id === id); window.__TAURI__.opener.revealItemInDir(`${await invoke('library_folder')}/${b.file}`) },
 })
@@ -132,8 +137,13 @@ function shortcut(k) {
   if (k === 'o' && !$('library').hidden) chooseFiles()
 }
 window.addEventListener('nightstand:shortcut', e => shortcut(e.detail))
+// ⌘I edits the book under the pointer (or the one the panel has)
+let hovered = null
+document.addEventListener('mouseover', e => { const b = e.target.closest?.('.bk[data-id]'); if (b) hovered = +b.dataset.id })
 document.addEventListener('keydown', e => {
   if (paletteOpen()) return
+  if (!$('library').hidden && detailsKey(e)) return
+  if (e.metaKey && e.key === 'i' && !$('library').hidden) { const id = hovered ?? detailsBook() ?? books[0]?.id; if (id != null) openDetails(id); return e.preventDefault() }
   if (e.metaKey && ['k', ',', 'o'].includes(e.key)) { shortcut(e.key); return e.preventDefault() }
   if ($('library').hidden || e.target.closest?.('input, textarea, .sheet')) return
   if (!e.metaKey && !e.ctrlKey && Date.now() - gArmed < 1200) {
@@ -149,4 +159,10 @@ await loadSettings()
 $('folder').textContent = (await invoke('library_folder')).replace(/^\/Users\/[^/]+/, '~')
 await load()
 initDevices({ filter: () => filter, go, render, books: () => books, toast, reload: load })
+initDetails({
+  toast, reload: load, coverSrc,
+  changed: b => { const i = books.findIndex(x => x.id === b.id); if (i >= 0) books[i] = { ...books[i], ...b }; render() },
+  // J and K follow the order on screen
+  order: () => [...document.querySelectorAll('#shelf .bk[data-id]')].map(x => +x.dataset.id),
+})
 if (setting('open_at') === 'book') { const last = books.filter(b => b.lastOpened).sort((a, b) => b.lastOpened - a.lastOpened)[0]; if (last) open(last.id) }

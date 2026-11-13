@@ -45,6 +45,10 @@ const handlers = {
   get_settings: () => ({ ...db.settings }),
   set_setting: ({ key, value }) => { if (value == null) delete db.settings[key]; else db.settings[key] = value; setTimeout(() => listeners.forEach(f => f({ payload: [key, value] }))) },
   set_status: ({ id, status }) => { db.books.find(b => b.id === id).status = status },
+  book_details: ({ id }) => { const b = db.books.find(b => b.id === id); b.details ??= { series: null, seriesIndex: null, published: '1871', publisher: null, language: 'en', isbn: null, description: null, shelves: [], rating: 0, sources: {}, pending: false }; return structuredClone(b) },
+  update_details: ({ id, title, authors, details }) => { Object.assign(db.books.find(b => b.id === id), { title, authors, details: { ...details, pending: true } }) },
+  commit_details: ({ id }) => { const b = db.books.find(b => b.id === id); b.details.pending = false; b.file = `${b.authors[0]}/${b.title}.epub`; window.COMMITS = (window.COMMITS ?? 0) + 1; return structuredClone(b) },
+  set_cover: () => {},
   open_settings: () => { window.SETTINGS_OPENED = (window.SETTINGS_OPENED ?? 0) + 1 },
   set_export: ({ folder, keep }) => { db.exp = { folder, keep }; return { written: folder ? new Set(db.underlines.map(u => u.bookId)).size : 0, removed: 0, skipped: [] } },
 }

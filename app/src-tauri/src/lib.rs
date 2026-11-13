@@ -2,6 +2,7 @@ mod devices;
 mod epub;
 mod library;
 mod notes;
+mod opf;
 
 use library::{Added, Book, Library, Note, Underline};
 use std::path::PathBuf;
@@ -348,6 +349,32 @@ fn apply_progress(lib: Lib, id: i64, fraction: f64, finished: bool) -> Result<Op
     lib.lock().unwrap().apply_progress(id, fraction, finished)
 }
 
+// ---------- Edit details ----------
+
+#[tauri::command]
+fn book_details(lib: Lib, id: i64) -> Result<Book, String> {
+    lib.lock().unwrap().details(id)
+}
+
+#[tauri::command]
+fn update_details(lib: Lib, id: i64, title: String, authors: Vec<String>, details: serde_json::Value) -> Result<(), String> {
+    lib.lock().unwrap().update_details(id, &title, &authors, &details)
+}
+
+#[tauri::command]
+fn set_cover(lib: Lib, id: i64, path: PathBuf) -> Result<(), String> {
+    lib.lock().unwrap().set_cover(id, &path)
+}
+
+/// Write the details into the book's file. Runs off the main thread: a big EPUB takes a moment.
+#[tauri::command]
+async fn commit_details(lib: Lib<'_>, id: i64) -> Result<Book, String> {
+    let lib = lib.lock().unwrap();
+    let b = lib.commit_details(id)?;
+    notes::after_change(&lib, id); // the exported file is named after the title
+    Ok(b)
+}
+
 #[tauri::command]
 fn list_notes(lib: Lib) -> Result<Vec<Note>, String> {
     lib.lock().unwrap().notes()
@@ -413,6 +440,9 @@ pub fn run() {
             #[cfg(debug_assertions)]
             if let Ok(path) = std::env::var("NIGHTSTAND_SELFTEST") {
                 let mut js = std::fs::read_to_string(&path)?;
+                if let Ok(img) = std::env::var("NIGHTSTAND_COVER_TEST") {
+                    js = format!("window.COVER = {};\n{js}", serde_json::to_string(&img)?);
+                }
                 if let Ok(dir) = std::env::var("NIGHTSTAND_EXPORT_TEST") {
                     js = format!("window.EXPORT_TEST = {};\n{js}", serde_json::to_string(&dir)?);
                 }
@@ -443,6 +473,10 @@ pub fn run() {
             export_preview,
             open_settings,
             list_notes,
+            book_details,
+            update_details,
+            set_cover,
+            commit_details,
             list_devices,
             device_contents,
             send_to_device,

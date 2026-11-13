@@ -37,8 +37,14 @@ Tauri 2, Mac first. A Rust core (`src-tauri/`) keeps the library; the window (`s
   - **What came in:** a banner says what arrived and can take it all back out; taken-out highlights don't come back. Each device can be set to Automatically, Ask first or Never.
   - **Removing a book from a device** never touches the library. Eject is on the device's page.
 
+- **Edit details:** the Edit button on a cover, ⌘I on the book under the pointer, or ⌘K's "Edit details" opens a panel beside the library.
+  - **Fields:** title, authors, series and number, published, publisher, language, ISBN, shelves, description, status and rating. They're read from the book's file the first time.
+  - **Saving:** changes save as you type and ⌘Z undoes. A pencil marks fields you've changed. J/K move to the next or previous book, Esc closes.
+  - **Cover:** click it to choose an image.
+  - **Writing the file:** when the panel lets go of a book, its EPUB is rewritten (`src-tauri/src/opf.rs`) and moved to Author/Title.epub if those changed. Only the package file and cover change; chapters are copied untouched, so underlines stay put. The Kindle copy is dropped so the next send has the new details.
+
 Not yet:
-- Edit details.
+- Edit details from Open Library: search, refresh with a side-by-side comparison, cover choices from its editions, and editing many books at once.
 - **Repeated short highlights:** for books Nightstand converted, the words around each Kindle highlight are read from the AZW3's own text near its location, and they pick the right place in the EPUB. On the generated test file that's 247 of 250 on exactly the right words (240 by location alone).
   - The 3 misses are two-word phrases in Middlemarch. That file's locations drift up to 3,500 bytes from the AZW3's real text, because they were generated from KindleUnpack's rebuilt pages. A real Kindle counts the AZW3's own text, so a real My Clippings.txt is the check.
   - Highlights in books bought from Amazon still use location alone.
@@ -71,6 +77,8 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
   - checks Notes;
   - removes its underline, prints a JSON report and quits.
 
+  `test/details-selftest.js` edits Middlemarch, sets a cover and checks the file is rewritten; run it with `NIGHTSTAND_LIBRARY` pointing at a copy of the library and `NIGHTSTAND_COVER_TEST` at an image.
+
   `test/devices-selftest.js` does the same for Devices, with `NIGHTSTAND_VOLUMES` pointing at a folder of pretend devices (a `Kindle` folder with `documents/`, `system/` and a My Clippings.txt, and a `KOBOeReader` folder with `.kobo/KoboReader.sqlite`).
 
   With `NIGHTSTAND_EXPORT_TEST=/some/empty/folder`, it also exports there and checks that removing the underline removes the file.
@@ -89,6 +97,7 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
 - `src/palette.js` is ⌘K.
 - `src/settings.html` and `src/settings.js` are the Settings window.
 - `src/store.js` holds settings shared between the windows.
+- `src/details.js` is Edit details.
 - `src/devices.js` and `src-tauri/src/devices.rs` are Devices. `converter/` is the EPUB-to-AZW3 helper.
 - `src-tauri/src/notes.rs` handles Markdown export.
 - `src/vendor/foliate-js` is foliate-js (MIT), with one small patch described in its `NIGHTSTAND.md`.
