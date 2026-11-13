@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Queue: status icon options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.45 "Inter",sans-serif;color:var(--foreground,#1b1c1f);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+.standalone body,.standalone{background:#eceef1}
+.standalone .wrap{padding:48px 32px 64px}
+.page-h h1{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.page-h p{color:var(--muted-foreground,#5c6068);margin-top:6px;max-width:760px}
+.card{background:#fff;color:#1b1c1f;border:1px solid #e3e5e9;border-radius:12px;padding:22px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:22px}
+.card.current{background:#f6f7f9}
+.card h2{font-size:18px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:baseline;gap:10px}
+.card h2 span{font-size:13px;font-weight:500;color:#8a8f98}
+.card .why{color:#4a4e55;margin:6px 0 16px;font-size:13.5px}
+.spec{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.spec figure{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 4px 10px;border-radius:8px;background:#f6f7f9}
+.spec figcaption{font-size:11.5px;color:#6b6f76;text-align:center;line-height:1.25}
+.sizes{display:flex;align-items:center;gap:14px;margin-top:12px;padding:10px 12px;border-radius:8px;background:#f6f7f9;font-size:11.5px;color:#6b6f76}
+.sizes .grp{display:flex;align-items:center;gap:6px}
+.mocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;align-content:start;min-width:0}
+.mock{border-radius:10px;padding:16px;font-size:12px}
+.mock.dark{--bg:#101113;--tx:#ecedee;--mu:#8a8f98;--ln:rgba(255,255,255,.07);--hv:rgba(255,255,255,.05);--sel:rgba(255,255,255,.06);--prog:#f2c94c;--done:#4cb782;--idle:#8a8f98;--star:#f5a524;--emp:rgba(255,255,255,.14);background:var(--bg);color:var(--tx)}
+.mock.light{--bg:#fff;--tx:#1b1c1f;--mu:#6b6f76;--ln:#ebecef;--hv:#f6f7f9;--sel:#f1f2f6;--prog:#d9a400;--done:#2f9e63;--idle:#9a9ea6;--star:#e3920b;--emp:#dcdde2;background:var(--bg);color:var(--tx);border:1px solid #e3e5e9}
+.mock .nv{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:5px;font-weight:500}
+.mock .nv.on{background:var(--sel)}
+.mock .nv b{margin-left:auto;font-weight:400;color:var(--mu)}
+.mock .gh{display:flex;align-items:center;gap:7px;margin:12px -16px 0;padding:6px 16px;background:var(--hv);font-weight:500;border-top:1px solid var(--ln);border-bottom:1px solid var(--ln)}
+.mock .gh b{font-weight:400;color:var(--mu)}
+.mock .row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--ln)}
+.mock .row img{width:14px;height:20px;border-radius:2px;object-fit:cover;background:var(--hv);flex:none}
+.mock .row .t{min-width:0;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mock .row .p{margin-left:auto;color:var(--mu);font-variant-numeric:tabular-nums}
+.mock .row .s{color:var(--star);font-size:10px;letter-spacing:-.5px;white-space:nowrap}
+.mock .row .s i{font-style:normal;color:var(--emp)}
+.ico{display:block;flex:none}
+.pick{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:#e9f6ef;color:#1f7a4c;font-size:11.5px;font-weight:600;vertical-align:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page-h">
+    <h1>Queue: status icons</h1>
+    <p>Five icon sets for <b>Reading</b> and <b>Not started</b> that move away from Linear's circles. Each one fills in as you read. Finished stays green in every set, and each set includes a matching Finished icon in case you want the three to look like one family. Reading progress shown: 22%, 64% and 90%.</p>
+  </header>
+  <div id="cards" class="wrap" style="padding:0;max-width:none;width:100%"></div>
+</div>
+<script>
+const V = (inner, size) => `<svg class="ico" width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+let uid = 0;
+const clip = (x, y, w, h) => { const id = "c" + (++uid); return [id, `<clipPath id="${id}"><rect x="${x}" y="${y}" width="${w}" height="${h}"/></clipPath>`]; };
+const CHECK = (x = 0, y = 0) => `<path d="M${5.6 + x} ${8.2 + y}l1.7 1.7 3.2-3.4" stroke="#fff" stroke-width="1.6"/>`;
+
+/* Each set: idle(size), reading(p, size), done(size). Colours come from CSS vars so they follow the theme. */
+const SETS = [
+ {name: "Bookmark", why: "A bookmark is what you put in a book you're reading. The ribbon fills from the top as you go, and empty means not started.",
+  idle: s => V(`<path d="M4.5 2.25h7v11.5L8 11.1l-3.5 2.65z" stroke="var(--idle)" stroke-width="1.4"/>`, s),
+  reading: (p, s) => { const [id, c] = clip(0, 2, 16, 11.6 * p + .4); return V(`<defs>${c}</defs><path d="M4.5 2.25h7v11.5L8 11.1l-3.5 2.65z" fill="var(--prog)" clip-path="url(#${id})"/><path d="M4.5 2.25h7v11.5L8 11.1l-3.5 2.65z" stroke="var(--prog)" stroke-width="1.4"/>`, s); },
+  done: s => V(`<path d="M4.5 2.25h7v11.5L8 11.1l-3.5 2.65z" fill="var(--done)" stroke="var(--done)" stroke-width="1.4"/><path d="m6.1 6.4 1.4 1.4 2.5-2.7" stroke="#fff" stroke-width="1.4"/>`, s)},
+ {name: "Closed book, open book", why: "Not started is a closed book. Reading opens it, and the pages fill from left to right with your progress.",
+  idle: s => V(`<rect x="3.5" y="2" width="9" height="12" rx="1.3" stroke="var(--idle)" stroke-width="1.4"/><path d="M6 2v12" stroke="var(--idle)" stroke-width="1.2"/>`, s),
+  reading: (p, s) => { const [id, c] = clip(1.5, 0, 13 * p, 16); const book = "M8 4.4C6.6 3.4 4.6 3 1.75 3v9.6c2.85 0 4.85.4 6.25 1.4 1.4-1 3.4-1.4 6.25-1.4V3C11.4 3 9.4 3.4 8 4.4z"; return V(`<defs>${c}</defs><path d="${book}" fill="var(--prog)" opacity=".55" clip-path="url(#${id})"/><path d="${book}" stroke="var(--prog)" stroke-width="1.35"/><path d="M8 4.4v9.6" stroke="var(--prog)" stroke-width="1.2"/>`, s); },
+  done: s => V(`<rect x="3.5" y="2" width="9" height="12" rx="1.3" fill="var(--done)" stroke="var(--done)" stroke-width="1.4"/>${CHECK(0, -.2)}`, s)},
+ {name: "Progress bar", why: "A small horizontal bar that fills as you read. It shows the exact percentage at a glance, and nothing about it is round.",
+  idle: s => V(`<rect x="1.75" y="5.25" width="12.5" height="5.5" rx="2" stroke="var(--idle)" stroke-width="1.4" stroke-dasharray="2 1.6"/>`, s),
+  reading: (p, s) => V(`<rect x="1.75" y="5.25" width="12.5" height="5.5" rx="2" stroke="var(--prog)" stroke-width="1.4"/><rect x="3.25" y="6.75" width="${Math.max(1, 9.5 * p).toFixed(2)}" height="2.5" rx=".8" fill="var(--prog)"/>`, s),
+  done: s => V(`<rect x="1.75" y="5.25" width="12.5" height="5.5" rx="2" fill="var(--done)" stroke="var(--done)" stroke-width="1.4"/>`, s)},
+ {name: "Page", why: "A page with a folded corner. Lines of text appear on it as you read. Not started is a blank page.",
+  idle: s => V(`<path d="M4 1.75h5.25l2.75 2.75v9.75H4z" stroke="var(--idle)" stroke-width="1.4"/><path d="M9.25 1.75V4.5H12" stroke="var(--idle)" stroke-width="1.2"/>`, s),
+  reading: (p, s) => { const n = Math.max(1, Math.ceil(p * 4)); const ys = [6.6, 8.6, 10.6, 12.4]; return V(`<path d="M4 1.75h5.25l2.75 2.75v9.75H4z" stroke="var(--prog)" stroke-width="1.4"/><path d="M9.25 1.75V4.5H12" stroke="var(--prog)" stroke-width="1.2"/>${ys.map((y, i) => `<path d="M6 ${y}h${i === 3 ? 2.6 : 4}" stroke="${i < n ? "var(--prog)" : "var(--emp)"}" stroke-width="1.2"/>`).join("")}`, s); },
+  done: s => V(`<path d="M4 1.75h5.25l2.75 2.75v9.75H4z" fill="var(--done)" stroke="var(--done)" stroke-width="1.4"/>${CHECK(0, .6)}`, s)},
+ {name: "Shelf", why: "Four book spines on a shelf, filling one at a time in quarters. It's the most distinctive of the five, and it echoes calibre's own bookshelf icon.",
+  idle: s => V(`${[[2, 4], [5.6, 2.5], [9.2, 5], [12.6, 3.5]].map(([x, y]) => `<rect x="${x}" y="${y}" width="2.2" height="${12.5 - y + 1}" rx=".6" stroke="var(--idle)" stroke-width="1.1"/>`).join("")}`, s),
+  reading: (p, s) => { const n = Math.max(1, Math.round(p * 4)); return V(`${[[2, 4], [5.6, 2.5], [9.2, 5], [12.6, 3.5]].map(([x, y], i) => `<rect x="${x}" y="${y}" width="2.2" height="${12.5 - y + 1}" rx=".6" stroke="${i < n ? "var(--prog)" : "var(--idle)"}" fill="${i < n ? "var(--prog)" : "none"}" stroke-width="1.1"/>`).join("")}`, s); },
+  done: s => V(`${[[2, 4], [5.6, 2.5], [9.2, 5], [12.6, 3.5]].map(([x, y]) => `<rect x="${x}" y="${y}" width="2.2" height="${12.5 - y + 1}" rx=".6" fill="var(--done)" stroke="var(--done)" stroke-width="1.1"/>`).join("")}`, s)},
+];
+const CURRENT = {name: "Current", why: "The circles Queue uses now: a dashed circle, a filling pie and a check. They work, but they're Linear's.",
+  idle: s => V(`<circle cx="8" cy="8" r="6.2" stroke="var(--idle)" stroke-width="1.6" stroke-dasharray="1.8 2.1"/>`, s),
+  reading: (p, s) => { const a = Math.min(p, .999) * 2 * Math.PI, x = 8 + 3.6 * Math.sin(a), y = 8 - 3.6 * Math.cos(a); return V(`<circle cx="8" cy="8" r="6.2" stroke="var(--prog)" stroke-width="1.6"/><path d="M8 8V4.4A3.6 3.6 0 ${a > Math.PI ? 1 : 0} 1 ${x.toFixed(2)} ${y.toFixed(2)}Z" fill="var(--prog)"/>`, s); },
+  done: s => V(`<circle cx="8" cy="8" r="6.6" fill="var(--done)"/>${CHECK(-.4, -.3)}`, s)};
+
+const COV = id => `https://covers.openlibrary.org/b/id/${id}-S.jpg`;
+const ROWS = [["Project Hail Mary", "reading", .64, 12455001, 5], ["The Dark Forest", "reading", .22, 14570131, 4], ["Piranesi", "idle", 0, 10226290, 4], ["Dune", "done", 1, 15110282, 4]];
+const starsHtml = r => "★".repeat(r) + `<i>${"★".repeat(5 - r)}</i>`;
+function mock(set, theme) {
+  const ic = (st, p) => st === "reading" ? set.reading(p, 14) : st === "done" ? set.done(14) : set.idle(14);
+  return `<div class="mock ${theme}" aria-label="${theme} theme preview">
+    <div class="nv">${set.reading(.5, 14)}Reading<b>3</b></div>
+    <div class="nv on">${set.idle(14)}Not started<b>7</b></div>
+    <div class="nv">${set.done(14)}Finished<b>6</b></div>
+    <div class="gh">${set.reading(.5, 14)}Reading<b>3</b></div>
+    ${ROWS.map(([t, st, p, c, r]) => `<div class="row">${ic(st, p)}<img src="${COV(c)}" alt="" onerror="this.style.visibility='hidden'"><span class="t">${t}</span><span class="p">${st === "reading" ? Math.round(p * 100) + "%" : ""}</span><span class="s">${starsHtml(r)}</span></div>`).join("")}
+  </div>`;
+}
+function card(set, i) {
+  const light = `style="--idle:#9a9ea6;--prog:#d9a400;--done:#2f9e63;--emp:#dcdde2"`;
+  return `<section class="card ${i === 0 ? "current" : ""}">
+    <div>
+      <h2>${i ? `${i}. ${set.name}` : set.name}${i ? "" : "<span>for comparison</span>"}${i === 1 ? `<span class="pick">Recommended</span>` : ""}</h2>
+      <p class="why">${set.why}</p>
+      <div class="spec" ${light}>
+        <figure>${set.idle(32)}<figcaption>Not started</figcaption></figure>
+        <figure>${set.reading(.22, 32)}<figcaption>Reading<br>22%</figcaption></figure>
+        <figure>${set.reading(.64, 32)}<figcaption>Reading<br>64%</figcaption></figure>
+        <figure>${set.reading(.9, 32)}<figcaption>Reading<br>90%</figcaption></figure>
+        <figure>${set.done(32)}<figcaption>Finished</figcaption></figure>
+      </div>
+      <div class="sizes" ${light}><span>Actual size</span>${[14, 16, 20].map(z => `<span class="grp">${set.idle(z)}${set.reading(.64, z)}${set.done(z)}</span>`).join("")}</div>
+    </div>
+    <div class="mocks">${mock(set, "dark")}${mock(set, "light")}</div>
+  </section>`;
+}
+document.getElementById("cards").innerHTML = [CURRENT, ...SETS].map(card).join("");
+if (!document.documentElement.style.getPropertyValue("--background") && !getComputedStyle(document.documentElement).getPropertyValue("--background").trim()) document.documentElement.classList.add("standalone");
+</script>
+</body>
+</html>

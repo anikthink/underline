@@ -1,0 +1,141 @@
+<!doctype html><meta charset="utf-8"><title>Anchors check</title>
+<style>body{font:13px system-ui;margin:16px}pre{white-space:pre-wrap}</style>
+<pre id="out">running…</pre>
+<script type="module">
+import { makeBook } from '../vendor-dl/foliate-js-main/view.js'
+import * as CFI from '../vendor-dl/foliate-js-main/epubcfi.js'
+const out = document.getElementById('out'), log = s => out.textContent += '\n' + s
+const rng = (a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 })(2026)
+
+// Fold text for matching: letters and digits only, no accents, lower case.
+// Quotes, dashes, spaces, hyphens and line breaks all disappear, so "to-day" matches "today".
+const keep = /[\p{L}\p{N}]/u
+const fold = s => { let o = ''; for (const c of s.normalize('NFKD')) if (keep.test(c)) o += c.toLowerCase(); return o }
+
+// Load a book and index its text: per section, the text nodes and a folded copy that maps back.
+async function load(file) {
+  const blob = await (await fetch(file)).blob()
+  const book = await makeBook(new File([blob], file.split('/').pop()))
+  const secs = []
+  let F = '', fmapS = [], fmapO = []
+  for (const [i, s] of book.sections.entries()) {
+    const doc = await s.createDocument()
+    const nodes = [], w = doc.createTreeWalker(doc.body ?? doc.documentElement, NodeFilter.SHOW_TEXT)
+    let text = ''
+    for (let n; n = w.nextNode();) { nodes.push([n, text.length]); text += n.nodeValue }
+    const fstart = F.length
+    for (let k = 0; k < text.length; k++) for (const c of text[k].normalize('NFKD')) if (keep.test(c)) { F += c.toLowerCase(); fmapS.push(i); fmapO.push(k) }
+    secs.push({ doc, nodes, text, fstart, cfi: s.cfi, id: s.id })
+  }
+  return { book, secs, F, fmapS: Int32Array.from(fmapS), fmapO: Int32Array.from(fmapO) }
+}
+const point = (sec, off) => { let lo = 0, hi = sec.nodes.length - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (sec.nodes[m][1] <= off) lo = m; else hi = m - 1 } const [n, s] = sec.nodes[lo]; return [n, Math.min(off - s, n.nodeValue.length)] }
+const rangeOf = (sec, a, b) => { const r = sec.doc.createRange(); r.setStart(...point(sec, a)); r.setEnd(...point(sec, b)); return r }
+const all = (F, q) => { const r = []; if (!q) return r; for (let i = F.indexOf(q); i >= 0; i = F.indexOf(q, i + 1)) r.push(i); return r }
+// Score a candidate by how much folded context agrees on either side.
+const agree = (a, b, rev) => { let n = 0; const L = Math.min(a.length, b.length); while (n < L && (rev ? a[a.length - 1 - n] === b[b.length - 1 - n] : a[n] === b[n])) n++; return n }
+// Find a quote in a book: returns { sec, a, b } in section text offsets, plus how many places it occurs.
+function findQuote(B, q, { prefix = '', suffix = '', frac = null }) {
+  const fq = fold(q), hits = all(B.F, fq)
+  if (!hits.length) return { count: 0 }
+  const fp = fold(prefix).slice(-40), fs = fold(suffix).slice(0, 40)
+  let best, bestScore = -1e9
+  for (const h of hits) {
+    let s = agree(B.F.slice(Math.max(0, h - 40), h), fp, true) + agree(B.F.slice(h + fq.length, h + fq.length + 40), fs)
+    if (frac != null) s -= Math.abs(h / B.F.length - frac) * 400
+    if (s > bestScore) bestScore = s, best = h
+  }
+  const e = best + fq.length - 1, sec = B.fmapS[best]
+  return { count: hits.length, sec, a: B.fmapO[best], b: B.fmapO[e] + 1, at: best }
+}
+
+const R = {}
+// ---------- Part A: underline Middlemarch, then rewrite the file ----------
+const orig = await load('books/pg145.epub')
+const marks = []
+const bodySecs = orig.secs.map((s, i) => [i, s]).filter(([, s]) => s.text.length > 2000)
+while (marks.length < 300) {
+  const [i, s] = bodySecs[Math.floor(rng() * bodySecs.length)]
+  const words = [...s.text.matchAll(/\S+/g)]
+  const w0 = Math.floor(rng() * (words.length - 60)), len = 3 + Math.floor(rng() * 57)
+  const a = words[w0].index, last = words[w0 + len - 1], b = last.index + last[0].length
+  const range = rangeOf(s, a, b)
+  marks.push({ cfi: CFI.joinIndir(s.cfi, CFI.fromRange(range)), exact: range.toString(), prefix: s.text.slice(Math.max(0, a - 48), a), suffix: s.text.slice(b, b + 48), sec: i, id: s.id, frac: a / s.text.length, crosses: range.startContainer !== range.endContainer })
+}
+R.underlines = { made: marks.length, crossElements: marks.filter(m => m.crosses).length, sample: marks[0].cfi }
+
+for (const v of ['details', 'edition']) {
+  const B = await load(`books/${v}.epub`)
+  const r = { cfiExact: 0, cfiWrongText: 0, cfiFailed: 0, quoteRecovered: 0, quoteWrongPlace: 0, lost: 0, lostExamples: [] }
+  for (const m of marks) {
+    let got = null
+    try { const { index, anchor } = B.book.resolveCFI(m.cfi); got = anchor(B.secs[index].doc).toString() } catch (e) { }
+    if (got != null && fold(got) === fold(m.exact)) { r.cfiExact++; continue }
+    got == null ? r.cfiFailed++ : r.cfiWrongText++
+    const f = findQuote(B, m.exact, m)
+    if (!f.count) { r.lost++; r.lostExamples.push(m.exact.slice(0, 80)); continue }
+    const s = B.secs[f.sec]
+    const right = s.id === m.id && Math.abs(f.a / s.text.length - m.frac) < 0.03
+    right ? r.quoteRecovered++ : r.quoteWrongPlace++
+  }
+  R[v] = r
+}
+
+// ---------- Part B: Kindle clippings ----------
+const truth = await (await fetch('books/truth.json')).json()
+const raw = await (await fetch('books/My Clippings.txt')).text()
+const clips = raw.split(/\r?\n==========\r?\n?/).map(e => e.replace(/^﻿/, '').split(/\r?\n/)).filter(l => l.length >= 2 && l[0].trim()).map(l => {
+  const m = l[1].match(/Your (Highlight|Note|Bookmark)\b.*?Location (\d+)(?:-(\d+))?.*?Added on (.*)$/)
+  return { head: l[0].replace(/^﻿/, '').trim(), kind: m?.[1], loc: +m?.[2], end: +(m?.[3] ?? m?.[2]), added: m?.[4], text: l.slice(3).join('\n').trim() }
+})
+const libFiles = { pg145: 'books/pg145.epub', pg1342: 'books/pg1342.epub', pg11: 'books/pg11.epub', pg84: 'books/pg84.epub' }
+const lib = {}
+for (const [k, f] of Object.entries(libFiles)) lib[k] = k === 'pg145' ? orig : await load(f)
+// match a clipping's "Title (Author)" line to a library book by folded title
+const titleOf = h => h.replace(/\s*\([^()]*\)\s*$/, '')
+const bookFor = h => Object.entries(lib).find(([, B]) => { const a = fold(titleOf(h)), b = fold(B.book.metadata.title?.toString() ?? ''); return a === b || a.startsWith(b) || b.startsWith(a) })?.[0]
+const ctx = await (await fetch('books/kindle-context.json')).json()
+const C = { entries: clips.length, highlights: 0, notes: 0, bookmarks: 0, notInLibrary: new Set(), duplicatesDropped: 0, notesAttached: 0 }
+const perBook = {}
+for (const c of clips) {
+  C[c.kind === 'Highlight' ? 'highlights' : c.kind === 'Note' ? 'notes' : 'bookmarks']++
+  const k = bookFor(c.head); if (!k) { C.notInLibrary.add(c.head); continue }
+  ;(perBook[k] ??= []).push(c)
+}
+const kept = {}
+for (const [k, list] of Object.entries(perBook)) {
+  let hs = list.filter(c => c.kind === 'Highlight')
+  // a highlight that was later extended shows up twice; keep the newer, longer one
+  // same place = the later one covers the earlier one's position in the AZW3
+  const pos = c => ctx[`${c.head}|${c.loc}|${c.text}`]
+  const covers = (d, c) => { const a = pos(c), b = pos(d); return a && b ? b.at <= a.at && b.at + b.len >= a.at + a.len : Math.abs(d.loc - c.loc) <= 2 && fold(d.text).includes(fold(c.text)) }
+  hs = hs.filter((c, i) => { const dup = hs.some((d, j) => j > i && d.text.length > c.text.length && covers(d, c)); if (dup) C.duplicatesDropped++; return !dup })
+  for (const n of list.filter(c => c.kind === 'Note')) if (hs.some(h => n.loc >= h.loc && n.loc <= h.end + 1)) C.notesAttached++
+  kept[k] = hs
+}
+C.kept = Object.values(kept).flat().length
+// match every kept highlight, either by location alone or with the words around it on the Kindle
+for (const mode of ['byLocation', 'withKindleContext']) {
+  const M = C[mode] = { right: 0, unique: 0, ambiguousRight: 0, wrongPlace: 0, missed: 0, byKind: {}, misses: [] }
+  for (const [k, hs] of Object.entries(kept)) {
+    const B = lib[k], maxloc = truth.find(t => t.meta?.book === k).meta.maxloc, T = truth.filter(t => t.book === k)
+    for (const h of hs) {
+      const t = T.find(t => t.text === h.text)
+      const bk = M.byKind[t?.kind ?? '?'] ??= { n: 0, right: 0 }; bk.n++
+      const x = mode === 'withKindleContext' ? ctx[`${h.head}|${h.loc}|${h.text}`] ?? {} : {}
+      const f = findQuote(B, h.text, { frac: (h.loc - 1) / maxloc, prefix: x.prefix ?? '', suffix: x.suffix ?? '' })
+      if (!f.count) { M.missed++; M.misses.push(h.text.slice(0, 90)); continue }
+      if (!t) { M.wrongPlace++; continue }
+      // check against the truth: the text around the match must be what was around it on the Kindle
+      const fb = fold(t.before).slice(-15), fa = fold(t.after).slice(0, 15), L = fold(h.text).length
+      const okB = !fb || B.F.slice(f.at - fb.length, f.at) === fb, okA = !fa || B.F.slice(f.at + L, f.at + L + fa.length) === fa
+      if (okB && okA) { M.right++; bk.right++; f.count === 1 ? M.unique++ : M.ambiguousRight++
+        CFI.joinIndir(B.secs[f.sec].cfi, CFI.fromRange(rangeOf(B.secs[f.sec], f.a, f.b))) }
+      else { M.wrongPlace++; (M.wrong ??= []).push(h.text) }
+    }
+  }
+}
+C.notInLibrary = [...C.notInLibrary]
+R.clippings = C
+out.textContent = JSON.stringify(R, null, 1); window.RESULT = R
+</script>

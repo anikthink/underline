@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightstand · Stack and first version</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:opsz,wght@7..72,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#e7e5e0;color:#1b1c1f;font:14.5px/1.6 "Inter",sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
+body{padding:56px 24px 96px}
+a{color:inherit;text-decoration:underline;text-decoration-color:#b9b4aa;text-underline-offset:3px}
+a:hover{text-decoration-color:#1b1c1f}
+.pg{max-width:980px;margin:0 auto}
+.back{font-size:13px;color:#6c6860;text-decoration:none}
+h1{font:600 30px/1.2 "Inter";letter-spacing:-.02em;margin:14px 0 6px;display:flex;align-items:center;gap:12px}
+h1 svg{width:30px;height:30px}
+.lede{color:#4c4a45;font-size:15px;max-width:720px}
+.rec{margin:28px 0 8px;background:#fbfaf7;border-radius:12px;box-shadow:0 0 0 1px rgba(0,0,0,.08);padding:22px 26px;display:grid;grid-template-columns:150px 1fr;gap:6px 28px}
+.rec dt{font-size:12.5px;color:#8a8780;padding-top:2px}
+.rec dd{color:#1b1c1f}
+.rec dd b{font-weight:600}
+section{margin-top:40px;display:grid;grid-template-columns:200px 1fr;gap:40px;border-top:1px solid #d3d0c9;padding-top:22px}
+section>h2{font:600 15px "Inter"}
+section ol,section ul{padding-left:18px;display:grid;gap:9px;color:#3c3a36;max-width:740px}
+section li::marker{color:#8a8780}
+section li b{font-weight:600;color:#1b1c1f}
+section p{color:#3c3a36;max-width:740px}
+section p+p{margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:#fbfaf7;border-radius:10px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid #ebe8e1}
+tr:last-child td{border-bottom:0}
+th{font-size:12px;font-weight:500;color:#8a8780;background:#f4f2ee}
+td:first-child{font-weight:500;color:#1b1c1f;width:170px}
+td.w{background:#eef6f0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.box{background:#fbfaf7;border-radius:10px;box-shadow:0 0 0 1px rgba(0,0,0,.08);padding:16px 18px}
+.box h3{font:600 13px "Inter";margin-bottom:8px}
+.box ul{gap:6px;font-size:13.5px}
+.risk{display:grid;gap:12px}
+.risk div{background:#fbfaf7;border-radius:10px;box-shadow:0 0 0 1px rgba(0,0,0,.08);padding:14px 18px}
+.risk b{display:block;font-weight:600;margin-bottom:3px}
+.risk p{font-size:13.5px}
+.risk .t{font-size:12.5px;color:#6c6860;margin-top:6px}
+.src{font-size:12.5px;color:#6c6860}
+.src li{gap:4px}
+code{font:12.5px ui-monospace,"SF Mono",Menlo,monospace;background:#f1efea;border-radius:4px;padding:0 4px}
+@media (max-width:820px){section,.rec{grid-template-columns:1fr;gap:12px}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="pg">
+<a class="back" href="index.html">← All prototypes</a>
+<h1><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg>Stack and first version</h1>
+<p class="lede">How Nightstand gets built: Tauri, what goes into version 1, and what to try first because it might not work.</p>
+
+<dl class="rec">
+  <dt>Decided 29 Oct</dt><dd><b>Tauri 2, Mac first.</b> The interface is built in the web view, with the same HTML and CSS as the prototypes. Books are rendered with foliate-js. A Rust core handles the library folder, the database, Open Library and the devices.</dd>
+  <dt>Why, in one line</dt><dd>The reader has to be a web view whichever way you go, so a SwiftUI app would be a native shell around web content anyway.</dd>
+  <dt>Biggest risk</dt><dd>Making AZW3 files for the Kindle without calibre. Try it first, before anything else is built.</dd>
+</dl>
+
+<section>
+  <h2>Why Tauri</h2>
+  <div>
+    <ol>
+      <li><b>Books are web content either way.</b> Apple has no EPUB renderer for Mac apps, and Readium's Swift toolkit, the main native option, targets iOS. Its macOS builds currently fail. A SwiftUI Nightstand would show books in a WKWebView running a JavaScript renderer. Tauri uses the same WKWebView on the Mac, so the reader would look and perform the same either way.</li>
+      <li><b>The prototypes carry over.</b> The library, Notes, ⌘K, Settings and the device pages are already HTML and CSS with real behaviour. In Tauri they become the app with their data swapped for real calls. In SwiftUI every screen is rebuilt from scratch.</li>
+      <li><b>Windows and Linux stay possible.</b> Nothing in the design is Mac-only. The same Tauri code builds for Windows (WebView2) and Linux (WebKitGTK). Calibre's users are on all three, and they're the most likely early users.</li>
+      <li><b>Rust is a good fit for the core.</b> SQLite, file watching, unzipping EPUBs, reading the Kobo's database and spotting a device being plugged in are all well covered by mature crates.</li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <h2>Side by side</h2>
+  <table>
+    <tr><th></th><th>Tauri 2</th><th>SwiftUI</th></tr>
+    <tr><td>Rendering books</td><td class="w">foliate-js in the web view: EPUB, MOBI and AZW3, with paginated and scrolled layouts</td><td>The same thing inside a WKWebView, since there's no native renderer for macOS</td></tr>
+    <tr><td>Everything else on screen</td><td class="w">The prototypes' HTML and CSS, made real</td><td>Rewritten in SwiftUI</td></tr>
+    <tr><td>Feeling like a Mac app</td><td>Good with care: native menus, a real Settings window and traffic lights are supported. Text fields and scrolling feel like the web unless they're tuned</td><td class="w">Best: native controls, text handling, Services, Share, Quick Look and Spotlight</td></tr>
+    <tr><td>Library, files, devices</td><td>Rust: SQLite, file watching, ZIP, the Kobo's SQLite database</td><td>Swift: Core Data or GRDB, FSEvents, DiskArbitration</td></tr>
+    <tr><td>Windows and Linux later</td><td class="w">Mostly the same code</td><td>Not possible without a second app</td></tr>
+    <tr><td>Download size</td><td>About 10–20 MB, using the system web view</td><td>About 5–15 MB</td></tr>
+    <tr><td>Who can build it</td><td class="w">Web developers, plus some Rust</td><td>Mac developers</td></tr>
+  </table>
+  <p style="grid-column:2;font-size:13px;color:#6c6860;margin-top:-28px">Green is the better option for Nightstand. Sizes are typical figures for each kind of app, not measurements.</p>
+</section>
+
+<section>
+  <h2>When SwiftUI would win</h2>
+  <p>If Nightstand is only ever a Mac app and feeling native matters more than anything else, choose SwiftUI. Spotlight indexing of underlines, Quick Look previews of books and system-wide Services are much easier natively. Even then, the reader would still be a web view running foliate-js, so the next section's risks stay the same.</p>
+</section>
+
+<section>
+  <h2>Try these first</h2>
+  <div class="risk">
+    <div><b>1. EPUB to AZW3 without calibre</b><p>Kindles don't show EPUB files copied over USB, so most sends need converting. Amazon's KindleGen is discontinued. Calibre's converter is GPL and around 200 MB. The one small route found is the Go library <code>leotaku/mobi</code>, used by the MIT-licensed <code>kindle-cli</code>, which writes KF8 (AZW3) directly. It could run as a small helper program bundled with the app.</p><p class="t">Test: convert all 16 library books, copy them to a real Paperwhite and check covers, the table of contents, images and Kindle's own highlights. If it fails, use calibre when it's installed, and otherwise send only books that already have an AZW3, MOBI or PDF.</p><p class="t" style="color:#24563a"><b style="display:inline;color:#24563a">Result, 30 Oct:</b> works on a computer. Four Gutenberg books convert in 0.1–3 seconds, and KindleUnpack and foliate-js both read them back with all text, images, covers and contents. The library needed a small patch to its contents index. Links inside a book become plain text, and the contents list is flat. Still to check on a real Paperwhite. Details in <a href="../spikes/azw3/README.md">spikes/azw3/README.md</a>.</p></div>
+    <div><b>2. Keeping underlines on the right words</b><p>Underlines are stored as EPUB CFIs, the standard way to point at a place in a book, which foliate-js supports. Kindle clippings only give a location number, so passages brought back from the Kindle are found by searching the book's text, which is how the Devices prototype describes it.</p><p class="t">Test: underline in Middlemarch, edit the book's details (which rewrites the file), and check the underlines are still on the same words. Bring in a real My Clippings.txt and count the matches.</p><p class="t" style="color:#24563a"><b style="display:inline;color:#24563a">Result, 30 Oct:</b> works, with one change: each underline is stored as a CFI <i>and</i> its quote with the words either side. After Edit details, all 300 test underlines in Middlemarch stayed on their words by CFI alone. After a harsher rewrite, like a corrected re-download, CFIs found none, and 10 pointed at the wrong words without failing; the quote put all 300 back. A generated My Clippings.txt from the converted books matched 250 of 250 highlights once the words around each one were read from the AZW3 itself; by location alone, 7 short ones landed on another copy of the same phrase. A real My Clippings.txt is still to check. Details in <a href="../spikes/anchors/README.md">spikes/anchors/README.md</a>.</p></div>
+    <div><b>3. The pages layout on a long book</b><p>Middlemarch is about 320,000 words. Paginating chapter by chapter in a web view is normal practice, but page numbers that stay stable across font sizes, like "p. 317 of 810", need a fixed reference rather than counting screens.</p><p class="t">Test: open Middlemarch, then change the size from 15 to 24 pt and back. Turning a page should feel instant, and the page number should stay put.</p></div>
+    <div><b>4. Kobo's database</b><p>Highlights and reading positions are read from <code>.kobo/KoboReader.sqlite</code>, which isn't documented and changes with Kobo's firmware. Nightstand only reads it, never writes, which keeps the risk small.</p><p class="t">Test: read a Clara 2E and a Libra Colour on current firmware.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Version 1</h2>
+  <div class="two">
+    <div class="box"><h3>In</h3><ul>
+      <li>A library in one folder, grouped by status, with shelves and keyboard control</li>
+      <li>Adding books by dropping files, copied in, with Open Library lookups</li>
+      <li>Editing details for one book or many</li>
+      <li>The Reader for EPUB, MOBI and AZW3: pages and scroll, themes, fonts, underlines with the four fixed labels, notes</li>
+      <li>Notes with Revisit, and Markdown export (off until a folder is chosen)</li>
+      <li>⌘K, with text search in the open book only, and the G shortcuts</li>
+      <li>Settings</li>
+      <li>Kindle and Kobo over USB: send, and bring back highlights and Kobo progress automatically</li>
+      <li>Import from calibre</li>
+      <li>macOS only</li>
+    </ul></div>
+    <div class="box"><h3>Not yet</h3><ul>
+      <li>Reading PDFs inside Nightstand. They open in Preview until then</li>
+      <li>Text search across every book</li>
+      <li>Send to Kindle by email, and Kobo over Wi-Fi</li>
+      <li>Sync between computers, or any account</li>
+      <li>Windows and Linux builds</li>
+      <li>Renaming labels</li>
+      <li>Books with DRM. They're listed on devices but never opened or copied</li>
+    </ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>Order of work</h2>
+  <ol>
+    <li><b>Tests 1 and 2 above.</b> Neither needs the app. If AZW3 conversion fails, the Devices design changes before anything is built on it.</li>
+    <li><b>Library and Reader.</b> The folder, the database, adding books, the library list and the Reader with underlines. This is the app someone could use daily.</li>
+    <li><b>Notes, ⌘K and Settings.</b> Mostly the prototypes' code, wired to the database.</li>
+    <li><b>Devices and calibre import.</b> Sending, bringing things back and the queue for unplugged devices.</li>
+    <li><b>Signing and release.</b> A notarised Mac download, and auto-update through Tauri's updater.</li>
+  </ol>
+</section>
+
+<section>
+  <h2>Sources</h2>
+  <ul class="src">
+    <li><a href="https://readium.org/mobile">Readium mobile toolkits</a>, plus the <a href="https://pub.dev/documentation/flutter_readium/0.6.1/">flutter_readium docs</a> and <a href="https://swiftpackageindex.com/builds/C800DC5B-2BE6-462C-9A71-D9F92F6A6D2F">Swift Package Index build results</a> on the Swift toolkit's macOS status</li>
+    <li><a href="https://github.com/johnfactotum/foliate-js">foliate-js</a>: EPUB, MOBI, KF8 (AZW3), FB2 and CBZ in the browser. The author calls the API unstable, so pin a version</li>
+    <li><a href="https://pkg.go.dev/github.com/seapy/kindle-cli/internal">kindle-cli</a>, which writes AZW3 using <code>github.com/leotaku/mobi</code></li>
+    <li><a href="https://www.goodnovel.com/qa/kindle-paperwhite-read-epub-files">Kindle and sideloaded EPUB</a> and a <a href="https://www.mobileread.com/forums/showthread.php?p=4534108">MobileRead thread</a> on sideloading. These are community sources; Amazon doesn't publish a USB format list</li>
+  </ul>
+</section>
+</div>
+</body>
+</html>

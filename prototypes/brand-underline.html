@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Underline · Brand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#e7e5e0;color:#1b1c1f;font:14px/1.5 "Inter",sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
+body{padding:56px 0 120px}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
+.pg{width:1280px;margin:0 auto;transform-origin:top left}
+.intro{display:grid;grid-template-columns:1fr 380px;gap:64px;align-items:end;margin-bottom:56px}
+.intro h1{font:600 30px/1.15 "Inter";letter-spacing:-.02em;display:flex;align-items:center;gap:12px}
+.intro h1 svg{width:30px;height:30px}
+.intro h1 span{color:#8a8780;font-weight:500}
+.intro p{color:#4c4a45;max-width:640px;margin-top:12px;font-size:15px}
+.intro dl{font-size:12.5px;color:#4c4a45;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.intro dt{color:#8a8780}
+section.s{margin-bottom:72px}
+.sh{display:flex;align-items:baseline;gap:14px;margin-bottom:18px;border-top:1px solid #d3d0c9;padding-top:22px}
+.sh .n{font:500 12px "Inter";color:#8a8780;font-variant-numeric:tabular-nums}
+.sh b{font:600 15px "Inter"}
+.sh p{color:#5c5a54;font-size:13px}
+.card{background:#fbfaf7;border-radius:12px;box-shadow:0 0 0 1px rgba(0,0,0,.07),0 12px 30px -18px rgba(30,25,15,.3)}
+
+/* 01 directions */
+.dirs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.dir{padding:22px;display:grid;gap:16px;position:relative;text-align:left}
+.dir.on{box-shadow:0 0 0 2px #24221f,0 12px 30px -18px rgba(30,25,15,.3)}
+.dir .big{display:grid;place-items:center;height:250px;border-radius:9px;background:linear-gradient(#efece5,#e6e2d8)}
+.dir .big svg{width:210px;height:210px}
+.dir .sizes{display:flex;align-items:flex-end;gap:18px;padding:12px 14px;border-radius:8px;background:#fff;box-shadow:inset 0 0 0 1px #ebe8e1}
+.dir .sizes.dk{background:#1c1d21;box-shadow:none}
+.dir .sizes figure{display:grid;justify-items:center;gap:6px}
+.dir .sizes figcaption{font-size:10.5px;color:#8a8780;font-variant-numeric:tabular-nums}
+.dir h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.dir h3 .tag{font-size:11px;font-weight:500;color:#fff;background:#24221f;border-radius:999px;padding:0 8px;line-height:19px}
+.dir p{color:#4c4a45;font-size:13px}
+.dir ul{list-style:none;display:grid;gap:3px;font-size:12.5px;color:#5c5a54}
+.dir li::before{content:"+ ";color:#2f9e63;font-weight:600}
+.dir li.minus::before{content:"– ";color:#c2410c}
+.pickhint{font-size:12.5px;color:#5c5a54;margin-top:10px}
+
+/* 02 icon */
+.icons{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.ic{padding:24px;display:grid;justify-items:center;gap:10px;border-radius:12px}
+.ic svg{width:260px;height:260px}
+.ic b{font-size:13px;font-weight:600}
+.ic span{font-size:12px;color:#6b6f76;text-align:center;max-width:300px}
+.ic.lt{background:linear-gradient(160deg,#f6f4ef,#e3ded3)}
+.ic.dk{background:linear-gradient(160deg,#2a2b30,#121316);color:#ecedee}
+.ic.dk span{color:#8a8f98}
+.ic.tn{background:linear-gradient(160deg,#4a5a7a,#1d2535);color:#ecedee}
+.ic.tn span{color:#aab3c5}
+.ladder{margin-top:16px;padding:20px 24px;display:flex;align-items:flex-end;gap:32px}
+.ladder figure{display:grid;justify-items:center;gap:8px}
+.ladder figcaption{font-size:11px;color:#8a8780;font-variant-numeric:tabular-nums}
+.ladder .grid{margin-left:auto;display:flex;gap:20px;align-items:center}
+.ladder .grid svg{width:200px;height:200px}
+.ladder .grid p{font-size:12.5px;color:#5c5a54;max-width:260px}
+
+/* 03 wordmark */
+.wm{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.wm .card{padding:48px;display:grid;place-items:center;min-height:240px;position:relative}
+.wm .card.ink{background:#1b1a18}
+.wm .card small{position:absolute;left:18px;bottom:14px;font-size:11.5px;color:#8a8780}
+.lock{display:flex;align-items:center;gap:16px}
+.lock svg{width:60px;height:60px}
+.word{font:600 50px/1 "Inter";letter-spacing:-.035em;color:#24221f;position:relative;padding-bottom:12px}
+.word::after{content:"";position:absolute;left:.04em;right:.06em;bottom:0;height:7px;border-radius:4px;background:#d9a400}
+.ink .word{color:#f3efe6}
+.ink .word::after{background:#e6b422}
+.word.plain{padding-bottom:0}.word.plain::after{display:none}
+.word.sm{font-size:30px;padding-bottom:7px}
+.word.sm::after{height:4px}
+.rules{grid-column:1/3;padding:22px 26px;display:grid;grid-template-columns:repeat(3,1fr);gap:28px;font-size:12.5px;color:#4c4a45}
+.rules b{display:block;color:#1b1c1f;font-size:13px;margin-bottom:4px}
+.rules .dont{display:flex;gap:14px;align-items:center;margin-top:10px}
+.rules .dont span{font:600 18px "Inter";letter-spacing:-.02em;position:relative}
+.rules .x{font-size:11px;color:#c2410c;font-weight:600}
+
+/* 04 colour */
+.cols{display:grid;grid-template-columns:1.1fr 1fr;gap:16px}
+.cols .card{padding:22px 24px}
+.cols h4{font-size:13px;font-weight:600;margin-bottom:4px}
+.cols h4+p{font-size:12.5px;color:#5c5a54;margin-bottom:16px}
+.sw{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sw div{border-radius:9px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.07)}
+.sw i{display:block;height:92px}
+.sw span{display:grid;padding:8px 10px;font-size:12px;background:#fff}
+.sw span b{font-weight:600}
+.sw span code{font:11px ui-monospace,"SF Mono",Menlo,monospace;color:#6b6f76}
+.prod{display:grid;gap:8px}
+.prod .r{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:center;font-size:12.5px}
+.prod .r>span{color:#6b6f76}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #e2dfd8;border-radius:6px;padding:2px 8px;background:#fff;font-size:12px}
+.chip i{width:10px;height:10px;border-radius:3px}
+.chip code{font:10.5px ui-monospace,"SF Mono",Menlo,monospace;color:#8a8780}
+.rule{margin-top:16px;padding:12px 14px;border-radius:8px;background:#f1eee7;font-size:12.5px;color:#3c3a36}
+.rule b{font-weight:600}
+
+/* 05 type */
+.type{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.type .card{padding:26px 28px}
+.type .fam{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;font-size:12px;color:#8a8780}
+.type .fam b{font-size:13px;color:#1b1c1f}
+.spec1 .a{font:600 40px/1.1 "Inter";letter-spacing:-.03em}
+.spec1 .b{font:500 15px/1.5 "Inter";margin-top:14px}
+.spec1 .c{font:400 13px/1.5 "Inter";color:#4c4a45;margin-top:4px}
+.spec1 .d{font:400 12px/1.5 "Inter";color:#8a8780;margin-top:10px;font-variant-numeric:tabular-nums}
+.spec2 .a{font:500 40px/1.1 "Literata";letter-spacing:-.01em}
+.spec2 .b{font:400 18px/1.62 "Literata";margin-top:14px;color:#2a2826;text-wrap:pretty}
+.spec2 .b span{text-decoration:underline;text-decoration-color:#d9a400;text-decoration-thickness:2px;text-underline-offset:5px;text-decoration-skip-ink:none}
+.spec2 .d{font:400 12px/1.5 "Inter";color:#8a8780;margin-top:12px}
+
+/* 06 voice */
+.voice{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.vc{padding:22px 24px;display:grid;gap:12px;align-content:start}
+.vc h4{font-size:14px;font-weight:600}
+.vc>p{font-size:12.5px;color:#5c5a54;margin-top:-6px}
+.ex{display:grid;grid-template-columns:44px 1fr;gap:6px 10px;font-size:13px;align-items:baseline}
+.ex .k{font-size:11px;font-weight:600;letter-spacing:.02em}
+.ex .k.y{color:#2f9e63}.ex .k.n{color:#c2410c}
+.ex .n+span{color:#8a8780;text-decoration:line-through;text-decoration-color:rgba(194,65,12,.35)}
+.ex em{font-style:normal;color:#8a8780;font-size:11.5px;grid-column:2;margin-top:-4px}
+.mech{grid-column:1/3;padding:18px 24px;display:flex;gap:36px;font-size:12.5px;color:#4c4a45}
+.mech b{color:#1b1c1f;font-weight:600}
+
+/* 07 in use */
+.use{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.wall{height:300px;border-radius:12px;position:relative;overflow:hidden;display:grid;align-items:end;justify-items:center;padding-bottom:14px}
+.wall.lt{background:radial-gradient(120% 90% at 20% 10%,#f3d9b8,transparent 60%),radial-gradient(90% 80% at 90% 30%,#c9d6e8,transparent 60%),linear-gradient(#efe7db,#d9d4cf)}
+.wall.dk{background:radial-gradient(120% 90% at 20% 10%,#3a2f4f,transparent 60%),radial-gradient(90% 80% at 90% 30%,#1f3a4a,transparent 60%),linear-gradient(#17161c,#0c0c10)}
+.dock{display:flex;gap:10px;align-items:flex-end;padding:9px 12px;border-radius:22px;background:rgba(255,255,255,.35);backdrop-filter:blur(20px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.45),0 10px 30px -10px rgba(0,0,0,.3)}
+.wall.dk .dock{background:rgba(40,40,46,.45);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 10px 30px -10px rgba(0,0,0,.6)}
+.dock .app{width:58px;height:58px;position:relative;display:grid;place-items:center}
+.dock .app svg{width:72px;height:72px}
+.dock .gen{width:46px;height:46px;border-radius:11px;background:rgba(255,255,255,.55);box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.wall.dk .gen{background:rgba(255,255,255,.1)}
+.dock .app.run::after{content:"";position:absolute;bottom:-6px;width:4px;height:4px;border-radius:50%;background:rgba(0,0,0,.55)}
+.wall.dk .dock .app.run::after{background:rgba(255,255,255,.7)}
+.dock .tip{position:absolute;top:-34px;left:50%;transform:translateX(-50%);font-size:12px;padding:2px 9px;border-radius:6px;background:rgba(240,240,240,.9);color:#1b1c1f;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.wall.dk .tip{background:rgba(50,50,56,.92);color:#eee}
+.mac{background:#ecebe8;border-radius:12px;box-shadow:0 0 0 1px rgba(0,0,0,.12),0 24px 50px -20px rgba(0,0,0,.35);overflow:hidden;position:relative}
+.mac .tb{height:38px;display:flex;align-items:center;gap:8px;padding:0 14px;font-size:12.5px;color:#4c4a45;font-weight:500}
+.mac .tb i{width:12px;height:12px;border-radius:50%;background:#ff5f57}.mac .tb i:nth-child(2){background:#febc2e}.mac .tb i:nth-child(3){background:#28c840}
+.mac .tb span{margin:0 auto;padding-right:60px}
+.about{width:300px;margin:0 auto;text-align:center;padding:10px 24px 26px;display:grid;justify-items:center;gap:2px}
+.about svg{width:110px;height:110px;margin-bottom:6px}
+.about b{font-size:16px}
+.about span{font-size:12px;color:#6b6f76}
+.about .lnk{margin-top:14px;font-size:12px;color:#5e6ad2}
+.stage{height:340px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(160deg,#d8d4cc,#c9c4ba)}
+.dmg{width:520px}
+.dmg .bd{height:250px;background:#fbfaf7;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;justify-items:center;padding:0 40px;position:relative}
+.dmg .bd figure{display:grid;justify-items:center;gap:6px;font-size:12.5px;color:#3c3a36}
+.dmg .bd svg.i{width:116px;height:116px}
+.dmg .arrow{width:90px;height:20px}
+.dmg .hint{position:absolute;bottom:16px;left:0;right:0;text-align:center;font-size:12px;color:#8a8780}
+.qs{border-top:1px solid #d3d0c9;padding-top:28px;display:grid;grid-template-columns:240px 1fr;gap:64px}
+.qs h2{font:600 15px "Inter"}
+.qs ol{padding-left:18px;color:#3c3a36;display:grid;gap:10px;max-width:760px}
+.qs li::marker{color:#8a8780}
+.qs li b{font-weight:600}
+</style>
+</head>
+<body>
+<div class="pg" data-fit>
+
+<section class="intro">
+  <div>
+    <h1><span id="hlogo"></span>Underline <span>Brand</span></h1>
+    <p>One idea: the line you draw under a sentence worth keeping. It sits in the mark, the wordmark and the reading screen, in the same ochre that marks a Quote. Everything else stays quiet so the books can be loud.</p>
+  </div>
+  <dl>
+    <dt>Status</dt><dd>Three mark directions, with one recommended and carried through the rest of the page</dd>
+    <dt>Try</dt><dd>Click a direction in 01. The icon, wordmark lockup, Dock, About window and installer all switch to it</dd>
+  </dl>
+</section>
+
+<section class="s">
+  <div class="sh"><span class="n">01</span><b>The mark</b><p>Three directions, each shown large and at the sizes macOS actually uses. 16px is the test that matters.</p></div>
+  <div class="dirs" id="dirs"></div>
+  <p class="pickhint">The rest of the page follows the selected direction.</p>
+</section>
+
+<section class="s">
+  <div class="sh"><span class="n">02</span><b>App icon</b><p>macOS shape and grid, with the light, dark and tinted versions that macOS 26 asks for.</p></div>
+  <div class="icons" id="icons"></div>
+  <div class="card ladder" id="ladder"></div>
+</section>
+
+<section class="s">
+  <div class="sh"><span class="n">03</span><b>Wordmark</b><p>Inter Semibold, tightened. There is only ever one underline: in the mark when the mark is present, under the word when it isn't.</p></div>
+  <div class="wm">
+    <div class="card"><div class="lock" data-lock="light"></div><small>Lockup: the mark carries the underline, so the word doesn't repeat it</small></div>
+    <div class="card ink"><span class="word">Underline</span><small>Wordmark alone, on Ink: here the word carries the underline</small></div>
+    <div class="card rules">
+      <div><b>Clear space</b>Keep the height of the underline's gap clear on every side. The mark never sits closer to the word than in the lockup.</div>
+      <div><b>Smallest sizes</b>The lockup goes down to 20px tall. Below that, use the mark alone. The wordmark without the underline is fine in running text: "Underline".</div>
+      <div><b>Don't</b>Don't underline in another colour, add a second underline next to the mark, or set the name in Literata.
+        <div class="dont"><span style="text-decoration:underline;text-decoration-color:#5e6ad2;text-decoration-thickness:3px;text-underline-offset:5px">Underline</span><span class="x">✕</span><span style="font-family:Literata;font-weight:500">Underline</span><span class="x">✕</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="s">
+  <div class="sh"><span class="n">04</span><b>Colour</b><p>A small brand palette, and the product colours already used across the prototypes.</p></div>
+  <div class="cols">
+    <div class="card">
+      <h4>Brand</h4><p>Ink and Paper do most of the work. Ochre is the underline, and only the underline.</p>
+      <div class="sw">
+        <div><i style="background:#24221f"></i><span><b>Ink</b><code>#24221F</code></span></div>
+        <div><i style="background:#fbfaf7"></i><span><b>Paper</b><code>#FBFAF7</code></span></div>
+        <div><i style="background:#e8e4da"></i><span><b>Linen</b><code>#E8E4DA</code></span></div>
+        <div><i style="background:#d9a400"></i><span><b>Ochre</b><code>#D9A400 · dark #E6B422</code></span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h4>Product</h4><p>From the library, reader and notes prototypes. Light theme values shown.</p>
+      <div class="prod">
+        <div class="r"><span>Action and focus</span><div class="chips"><span class="chip"><i style="background:#5e6ad2"></i>Indigo<code>#5E6AD2</code></span></div></div>
+        <div class="r"><span>Reading status</span><div class="chips"><span class="chip"><i style="background:#d9a400"></i>Reading<code>#D9A400</code></span><span class="chip"><i style="background:#2f9e63"></i>Finished<code>#2F9E63</code></span><span class="chip"><i style="background:#6b6f76"></i>Not started<code>#6B6F76</code></span></div></div>
+        <div class="r"><span>Underline labels</span><div class="chips"><span class="chip"><i style="background:#d9a400"></i>Quote</span><span class="chip"><i style="background:#2f9e63"></i>Idea</span><span class="chip"><i style="background:#5e6ad2"></i>Question</span><span class="chip"><i style="background:#d0517a"></i>Disagree</span></div></div>
+      </div>
+      <div class="rule"><b>The rule:</b> indigo is for things you press, ochre is for things you've underlined or are reading. A button is never ochre, and the logo is never indigo.</div>
+    </div>
+  </div>
+</section>
+
+<section class="s">
+  <div class="sh"><span class="n">05</span><b>Type</b><p>Two families, both free and open source. Inter runs the app; Literata is for reading and for quotes wherever they appear.</p></div>
+  <div class="type">
+    <div class="card spec1"><div class="fam"><b>Inter</b>Interface · 400 500 600</div>
+      <div class="a">Adding 13 books</div>
+      <div class="b">4 editions match. Which translation is this?</div>
+      <div class="c">Copied to ~/Books/Underline. The file stays in Downloads until you choose.</div>
+      <div class="d">12.5–13px body · 11.5px meta · tabular numbers in counts · cv11, ss01</div></div>
+    <div class="card spec2"><div class="fam"><b>Literata</b>Reading and quotes · 400 500</div>
+      <div class="a">Middlemarch</div>
+      <div class="b">We are all humiliated by the sudden discovery of a fact which has existed very comfortably and perhaps been <span>staring at us in private</span> while we have been making up our world entirely without it.</div>
+      <div class="d">19px default in the reader, 1.62 line height · George Eliot, Chapter 35</div></div>
+  </div>
+</section>
+
+<section class="s">
+  <div class="sh"><span class="n">06</span><b>Voice</b><p>Calm, exact and on the reader's side. Every "Do" here is copy from the prototypes.</p></div>
+  <div class="voice">
+    <div class="card vc"><h4>Say what happened, and why</h4><p>Name the cause in the same sentence.</p>
+      <div class="ex"><span class="k y">DO</span><span>Protected with Kindle DRM, so Underline can't open it.</span><span class="k n">DON'T</span><span>Oops! Something went wrong with this file.</span></div></div>
+    <div class="card vc"><h4>Ask one question</h4><p>When Underline needs you, it asks the question it actually has.</p>
+      <div class="ex"><span class="k y">DO</span><span>4 editions match. Which translation is this?</span><span class="k n">DON'T</span><span>Metadata conflict detected (4 candidates).</span></div></div>
+    <div class="card vc"><h4>Say what's safe</h4><p>Before a change, say what it won't touch. That beats "Are you sure?".</p>
+      <div class="ex"><span class="k y">DO</span><span>Rewrites these files when you add or change an underline. Never touches other files.</span><span class="k n">DON'T</span><span>Are you sure you want to enable sync?</span></div></div>
+    <div class="card vc"><h4>Empty means a next step</h4><p>An empty view says what to do next, and often brings back a passage.</p>
+      <div class="ex"><span class="k y">DO</span><span>Nothing in progress. Start one from Not started, or read a finished book again.</span><span class="k n">DON'T</span><span>No books found.</span></div></div>
+    <div class="card mech"><span><b>Sentence case</b> everywhere, including buttons.</span><span><b>Numerals</b> for counts: 13 files, 4 editions.</span><span><b>No exclamation marks,</b> no "we". The app is "Underline".</span><span><b>Books are named</b> in italics in prose, plain in the UI.</span></div>
+  </div>
+</section>
+
+<section class="s">
+  <div class="sh"><span class="n">07</span><b>In use</b><p>The Dock in light and dark mode, the About window, and the installer.</p></div>
+  <div class="use">
+    <div class="wall lt"><div class="dock" data-dock="light"></div></div>
+    <div class="wall dk"><div class="dock" data-dock="dark"></div></div>
+    <div class="stage"><div class="mac"><div class="tb"><i></i><i></i><i></i><span></span></div><div class="about" id="about"></div></div></div>
+    <div class="stage"><div class="mac dmg"><div class="tb"><i></i><i></i><i></i><span>Underline 1.0</span></div><div class="bd" id="dmg"></div></div></div>
+  </div>
+</section>
+
+<section class="qs">
+  <h2>Open questions</h2>
+  <ol>
+    <li><b>Which mark.</b> I recommend A, the Underlined U. It's already in every prototype and it still reads at 16px. B is more literary but its serif blurs at small sizes. C says "notes app" more than "books".</li>
+    <li><b>Tagline.</b> None, or one of: "For the lines worth keeping." / "Read. Underline. Remember." It would only appear on the website and the installer.</li>
+    <li><b>Icon finish.</b> Flat, as shown, or a faint paper grain on the light icon? Grain looks richer in the Dock, but disappears at small sizes and in the tinted icon.</li>
+  </ol>
+</section>
+</div>
+
+<script>
+let uid = 0;
+const PAL = {
+  light: {bg: ["#fdfcf8", "#e9e3d4"], ink: "#24221f", och: "#d9a400", line: "rgba(36,34,31,.28)"},
+  dark: {bg: ["#2c2a27", "#121110"], ink: "#f3efe6", och: "#e6b422", line: "rgba(243,239,230,.3)"},
+  tinted: {bg: ["#3d4a66", "#1c2333"], ink: "rgba(255,255,255,.94)", och: "rgba(255,255,255,.5)", line: "rgba(255,255,255,.3)"},
+};
+/* Glyphs on a 100-unit square. */
+const GLYPH = {
+  A: p => `<path d="M33.5 23v24.5a16.5 16.5 0 0 0 33 0V23" fill="none" stroke="${p.ink}" stroke-width="9.5" stroke-linecap="round"/><path d="M29 80h42" stroke="${p.och}" stroke-width="9.5" stroke-linecap="round"/>`,
+  B: p => `<text x="50" y="67" text-anchor="middle" font-family="Literata, Georgia, serif" font-weight="500" font-size="82" fill="${p.ink}">u</text><path d="M27 80.5h46" stroke="${p.och}" stroke-width="7" stroke-linecap="round"/>`,
+  C: p => `<path d="M25 31h50M25 66h32" stroke="${p.line}" stroke-width="6.5" stroke-linecap="round"/><path d="M25 47h50" stroke="${p.ink}" stroke-width="6.5" stroke-linecap="round"/><path d="M23.5 56.5c9-1.6 18.5-.9 27.5-.3 8.5.6 17 .5 26-.9" fill="none" stroke="${p.och}" stroke-width="5.5" stroke-linecap="round"/>`,
+};
+/* A full macOS icon: 824/1024 body with continuous-ish corners and a soft shadow. */
+function icon(dir, v = "light", shadow = true) {
+  const p = PAL[v], id = "g" + (++uid);
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${p.bg[0]}"/><stop offset="1" stop-color="${p.bg[1]}"/></linearGradient>
+    ${shadow ? `<filter id="${id}s" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="1.6" stdDeviation="1.8" flood-color="#000" flood-opacity=".28"/></filter>` : ""}</defs>
+    <rect x="9.8" y="9.8" width="80.4" height="80.4" rx="18.2" fill="url(#${id})" ${shadow ? `filter="url(#${id}s)"` : ""}/>
+    <rect x="9.8" y="9.8" width="80.4" height="80.4" rx="18.2" fill="none" stroke="${v === "light" ? "rgba(0,0,0,.08)" : "rgba(255,255,255,.1)"}" stroke-width=".5"/>
+    <g transform="translate(9.8 9.8) scale(.804)">${GLYPH[dir](p)}</g></svg>`;
+}
+const DIRS = {
+  A: {name: "Underlined U", p: "A geometric U with the ochre underline below. The name and the action in one shape.", plus: ["Clear at 16px", "Already used in every prototype", "Echoes the round strokes of Inter"], minus: ["Plain, until the underline is learned"]},
+  B: {name: "Literary u", p: "A lowercase Literata u over the underline. Looks like a page from the book itself.", plus: ["Warm and bookish", "Same serif as the reader"], minus: ["Serifs blur at 16 and 32px", "The letter has to be outlined from a typeface"]},
+  C: {name: "The underlined line", p: "Three lines of text, the middle one underlined by hand. Shows the action itself.", plus: ["Describes the feature directly", "Shape holds up when tinted"], minus: ["Reads as a notes or to-do app", "Loses the U, so the name has to carry it"]},
+};
+let sel = "A";
+function draw() {
+  document.getElementById("hlogo").innerHTML = icon(sel, "light", false).replace("<svg", '<svg width="30" height="30"');
+  document.getElementById("dirs").innerHTML = Object.entries(DIRS).map(([k, d]) => `
+    <button class="card dir${k === sel ? " on" : ""}" data-d="${k}">
+      <div class="big">${icon(k)}</div>
+      <div class="sizes">${[64, 32, 16].map(s => `<figure>${icon(k, "light", s > 16).replace("<svg", `<svg width="${s}" height="${s}"`)}<figcaption>${s}</figcaption></figure>`).join("")}
+        <span style="flex:1"></span>${[32, 16].map(s => `<figure>${icon(k, "dark", false).replace("<svg", `<svg width="${s}" height="${s}"`)}<figcaption>${s} dark</figcaption></figure>`).join("")}</div>
+      <h3>${k} · ${d.name}${k === "A" ? '<span class="tag">Recommended</span>' : ""}</h3>
+      <p>${d.p}</p>
+      <ul>${d.plus.map(x => `<li>${x}</li>`).join("")}${d.minus.map(x => `<li class="minus">${x}</li>`).join("")}</ul>
+    </button>`).join("");
+  document.getElementById("icons").innerHTML = [["lt", "light", "Default", "Paper with a slight fall to Linen. Ink letter, Ochre line."], ["dk", "dark", "Dark", "For dark mode Docks. Paper and Ochre on warm black."], ["tn", "tinted", "Tinted", "macOS tints this one to the user's colour, so the underline is told apart by brightness alone."]]
+    .map(([c, v, b, s]) => `<div class="ic ${c}">${icon(sel, v)}<b>${b}</b><span>${s}</span></div>`).join("");
+  document.getElementById("ladder").innerHTML = [512, 256, 128, 64, 32, 16].map(s => `<figure>${icon(sel, "light", s >= 32).replace("<svg", `<svg width="${Math.min(s, 160)}" height="${Math.min(s, 160)}"`)}<figcaption>${s}${s > 160 ? " (shown at 160)" : ""}</figcaption></figure>`).join("") +
+    `<div class="grid"><svg viewBox="0 0 100 100"><rect x="0" y="0" width="100" height="100" fill="#f4f2ec"/><g stroke="#d9a400" stroke-width=".25" opacity=".9"><rect x="9.8" y="9.8" width="80.4" height="80.4" rx="18.2" fill="none"/><path d="M50 0v100M0 50h100" stroke-dasharray="1 1"/><circle cx="50" cy="50" r="30" fill="none"/></g><g transform="translate(9.8 9.8) scale(.804)">${GLYPH[sel](PAL.light)}</g></svg><p>On the 1024 grid the body is 824px with a 185px corner. Strokes are 9.5 units, the same weight for the letter and the line, so neither one dominates.</p></div>`;
+  document.querySelectorAll("[data-lock]").forEach(el => { const v = el.dataset.lock; el.innerHTML = icon(sel, v, false) + '<span class="word plain">Underline</span>'; });
+  document.querySelectorAll("[data-dock]").forEach(el => {
+    const v = el.dataset.dock;
+    el.innerHTML = `<span class="app"><span class="gen"></span></span><span class="app run"><span class="gen"></span></span><span class="app run">${icon(sel, v)}<span class="tip">Underline</span></span><span class="app"><span class="gen"></span></span><span class="app"><span class="gen"></span></span>`;
+  });
+  document.getElementById("about").innerHTML = `${icon(sel)}<b>Underline</b><span>Version 1.0 (14)</span><span>26 books · 17 underlines</span><span style="margin-top:10px">Book data from Open Library</span><span>© 2026</span><button class="lnk">Acknowledgements</button>`;
+  document.getElementById("dmg").innerHTML = `<figure>${icon(sel).replace("<svg", '<svg class="i"')}Underline</figure>
+    <svg class="arrow" viewBox="0 0 90 20"><path d="M2 10h80M74 3l8 7-8 7" fill="none" stroke="#b9b4aa" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <figure><svg class="i" viewBox="0 0 100 100"><path d="M10 28a6 6 0 0 1 6-6h22l7 7h39a6 6 0 0 1 6 6v43a6 6 0 0 1-6 6H16a6 6 0 0 1-6-6z" fill="#5aa9f0"/><path d="M10 36h80v42a6 6 0 0 1-6 6H16a6 6 0 0 1-6-6z" fill="#6fb8f6"/><path d="M38 58h24M50 46v24" stroke="#2f7fc8" stroke-width="4" stroke-linecap="round" opacity=".7"/></svg>Applications</figure>
+    <div class="hint">Drag Underline into Applications</div>`;
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-d]"); if (b) { sel = b.dataset.d; draw(); } });
+draw();
+let scale = 1;
+function fit() {
+  scale = Math.min(1, (innerWidth - 48) / 1280);
+  document.querySelectorAll("[data-fit]").forEach(el => {
+    el.style.transform = scale < 1 ? `scale(${scale})` : "";
+    el.style.marginLeft = scale < 1 ? "24px" : "";
+    el.style.marginBottom = scale < 1 ? `${-(el.offsetHeight * (1 - scale)) + 40}px` : "";
+  });
+}
+fit(); addEventListener("resize", fit);
+</script>
+</body>
+</html>

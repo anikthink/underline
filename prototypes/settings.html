@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightstand · Settings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#e7e5e0;color:#1b1c1f;font:14px/1.5 "Inter",sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
+body{padding:56px 0 96px}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+
+/* canvas shell */
+.intro{width:1280px;margin:0 auto 40px;display:grid;grid-template-columns:1fr 380px;gap:64px;align-items:end;transform-origin:top left}
+.intro h1{font:600 30px/1.15 "Inter";letter-spacing:-.02em;display:flex;align-items:center;gap:12px}
+.intro h1 .lg{width:30px;height:30px}
+.intro h1 span{color:#8a8780;font-weight:500}
+.intro p{color:#4c4a45;max-width:640px;margin-top:12px;font-size:15px}
+.intro dl{font-size:12.5px;color:#4c4a45;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.intro dt{color:#8a8780}
+.kb{font:500 10.5px "Inter";color:#8a8780;border:1px solid #cfccc5;border-radius:4px;padding:0 4px;line-height:15px}
+.frame{width:1280px;margin:0 auto 64px;transform-origin:top left}
+.frame>header{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+.frame>header b{font:600 13px "Inter";color:#1b1c1f;white-space:nowrap}
+.frame>header .n{font:500 12px "Inter";color:#8a8780;font-variant-numeric:tabular-nums}
+.frame>header p{color:#5c5a54;font-size:13px}
+.win{width:1280px;height:800px;border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.09),0 30px 70px -20px rgba(30,25,15,.35),0 8px 20px -10px rgba(30,25,15,.2);position:relative}
+.qs{width:1280px;margin:0 auto 40px;border-top:1px solid #d3d0c9;padding-top:28px;display:grid;grid-template-columns:240px 1fr;gap:64px}
+.qs h2{font:600 15px "Inter"}
+.qs ol{padding-left:18px;color:#3c3a36;display:grid;gap:10px;max-width:760px}
+.qs li::marker{color:#8a8780;font-variant-numeric:tabular-nums}
+.qs li b{font-weight:600}
+
+/* app tokens (library option 3) */
+.app{--out:#08090a;--panel:#101113;--raise:#17181b;--pop:#1c1d21;--ln:rgba(255,255,255,.07);--ln2:rgba(255,255,255,.11);
+  --tx:#ecedee;--tx2:#c9cbcf;--mu:#8a8f98;--fa:#62666d;--hv:rgba(255,255,255,.035);--sel:rgba(255,255,255,.06);
+  --ac:#5e6ad2;--ac2:#7c85e0;--prog:#f2c94c;--done:#4cb782;--star:#f2c94c;--shadow:0 16px 48px rgba(0,0,0,.55);--side:-24px 0 60px -20px rgba(0,0,0,.7);
+  position:absolute;inset:0;background:var(--out);color:var(--tx);font:13px/1.45 "Inter",sans-serif;display:grid;grid-template-columns:232px 1fr;outline:none}
+.app[data-theme=light]{--out:#f4f5f8;--panel:#fff;--raise:#f7f8fa;--pop:#fff;--ln:#e8e9ed;--ln2:#dcdde2;--tx:#1b1c1f;--tx2:#3c3f44;--mu:#6b6f76;--fa:#9a9ea6;
+  --hv:rgba(0,0,0,.025);--sel:rgba(94,106,210,.07);--done:#2f9e63;--prog:#d9a400;--star:#e0a800;--shadow:0 16px 48px rgba(20,20,40,.16);--side:-24px 0 50px -24px rgba(20,20,40,.25)}
+.app svg{display:block;flex:none}
+.app :focus-visible{outline:2px solid var(--ac);outline-offset:-1px;border-radius:5px}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+/* sidebar */
+.sb{display:flex;flex-direction:column;padding:10px 8px;gap:2px;min-height:0}
+.lights{display:flex;gap:8px;padding:4px 8px 12px}
+.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57}
+.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.ws{display:flex;align-items:center;gap:8px;padding:6px 4px 6px 8px;margin-bottom:6px}
+.ws .lg{width:20px;height:20px}
+.ws b{font-weight:600;font-size:13px}
+.ws .add{margin-left:auto;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--mu)}
+.nv{display:flex;align-items:center;gap:9px;width:100%;padding:5px 8px;border-radius:6px;color:var(--tx2);text-align:left;font-weight:500}
+.nv:hover{background:var(--hv)}
+.nv.on{background:var(--sel);color:var(--tx)}
+.nv .ct{margin-left:auto;color:var(--fa);font-size:12px;font-weight:400;font-variant-numeric:tabular-nums}
+.nv .dot{width:9px;height:9px;border-radius:50%;margin:0 2.5px}
+.nv .ul{width:14px;display:grid;place-items:center}
+.nv .ul i{width:12px;height:2px;border-radius:1px;background:var(--tx2)}
+.sec{padding:16px 8px 4px;font-size:11.5px;font-weight:500;color:var(--fa)}
+.sb-foot{margin-top:auto}
+.theme{display:flex;gap:2px;padding:3px;background:var(--hv);border-radius:7px;margin:0 8px 8px}
+.theme button{flex:1;padding:3px 0;border-radius:5px;font-size:12px;color:var(--mu)}
+.theme button.on{background:var(--panel);color:var(--tx);box-shadow:0 0 0 1px var(--ln)}
+
+/* main + library list */
+.main{margin:8px 8px 8px 0;background:var(--panel);border:1px solid var(--ln);border-radius:9px;display:grid;grid-template-rows:44px 1fr;min-height:0;overflow:hidden;position:relative}
+.hd{display:flex;align-items:center;gap:10px;padding:0 14px 0 18px;border-bottom:1px solid var(--ln)}
+.hd .crumb{font-weight:500;color:var(--tx);white-space:nowrap}
+.hd .crumb small{color:var(--fa);font-weight:400;margin-left:8px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.hbtn{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:6px;border:1px solid var(--ln2);color:var(--tx2);font-weight:500;font-size:12px;white-space:nowrap}
+.hbtn:hover{background:var(--hv);color:var(--tx)}
+.pbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;background:var(--ac);color:#fff;font-weight:500;font-size:12px;white-space:nowrap}
+.pbtn:hover{background:var(--ac2)}
+.pbtn:disabled{opacity:.4;cursor:default;background:var(--ac)}
+.ib{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--mu)}
+.ib:hover{background:var(--hv);color:var(--tx)}
+.ib:disabled{opacity:.35;cursor:default;background:none}
+.list{overflow:auto;outline:none;position:relative;scrollbar-width:thin;scrollbar-color:var(--ln2) transparent;min-height:0}
+.gh{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;height:36px;padding:0 14px 0 18px;background:var(--raise);border-bottom:1px solid var(--ln);font-weight:500;color:var(--tx)}
+.gh .cn{color:var(--fa);font-weight:400}
+.row{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px 0 14px;border-bottom:1px solid var(--ln);position:relative;cursor:default}
+.row:hover{background:var(--hv)}
+.row.focus{background:var(--sel)}
+.row.focus::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--ac)}
+.row.picked{background:color-mix(in srgb,var(--ac) 13%,transparent)}
+.row .cb{width:14px;height:14px;border-radius:4px;border:1px solid var(--ln2);display:grid;place-items:center;flex:none;color:#fff}
+.row.picked .cb{background:var(--ac);border-color:var(--ac)}
+.row .cv{width:18px;height:26px;border-radius:2px;flex:none;box-shadow:0 0 0 1px var(--ln);object-fit:cover}
+.row .tt{font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.row .au{color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 10 auto;min-width:0}
+.row .sp{flex:1 1 0;min-width:8px}
+.row .lb{display:flex;align-items:center;gap:6px;border:1px solid var(--ln2);border-radius:999px;padding:1px 8px 1px 7px;font-size:11.5px;color:var(--tx2);white-space:nowrap;flex:none}
+.row .lb i{width:7px;height:7px;border-radius:50%}
+.row .fm{font-size:11px;color:var(--fa);width:112px;white-space:nowrap;text-align:right;flex:none;letter-spacing:.02em}
+.row .new{font-size:11px;font-weight:500;color:var(--ac2);border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);background:color-mix(in srgb,var(--ac) 12%,transparent);border-radius:999px;padding:0 7px;line-height:18px;flex:none}
+.row.flash{animation:flash 1.2s ease-out}
+@keyframes flash{from{background:color-mix(in srgb,var(--ac) 22%,transparent)}}
+.toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%) translateY(8px);background:var(--pop);color:var(--tx);border:1px solid var(--ln2);box-shadow:var(--shadow);padding:7px 12px;border-radius:8px;font-size:12px;z-index:90;opacity:0;transition:.18s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.toast kbd,.kh kbd{font:500 10.5px "Inter";border:1px solid var(--ln2);border-radius:4px;padding:0 4px;color:var(--mu);background:var(--raise);margin-left:6px}
+/* dialogs */
+.scrim{position:absolute;inset:0;z-index:60;display:grid;place-items:center;background:rgba(0,0,0,.5);animation:fade .15s ease-out}
+.app[data-theme=light] .scrim{background:rgba(20,22,40,.2)}
+@keyframes fade{from{opacity:0}}
+.dlg{background:var(--pop);border:1px solid var(--ln2);border-radius:12px;box-shadow:var(--shadow);display:grid;grid-template-rows:auto 1fr auto;overflow:hidden;animation:pop .16s ease-out;max-height:700px}
+@keyframes pop{from{opacity:0;transform:translateY(-4px) scale(.985)}}
+.dlg .dh{padding:16px 16px 12px 20px;display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid var(--ln)}
+.dlg .dh h3{font-size:14px;font-weight:600}
+.dlg .dh p{color:var(--mu);font-size:12.5px;margin-top:2px}
+.dlg .dh .ib{margin-left:auto}
+.dlg .df{display:flex;align-items:center;gap:8px;padding:12px 16px 12px 20px;border-top:1px solid var(--ln);color:var(--fa);font-size:12px}
+.dlg .df .sp{margin-right:auto}
+.ck{width:15px;height:15px;border-radius:4px;border:1px solid var(--ln2);display:grid;place-items:center;color:transparent;background:var(--panel);margin-top:1px}
+.ck.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.ck:disabled{opacity:.3}
+
+.dv{white-space:nowrap;display:flex;align-items:center;gap:9px;width:100%;padding:5px 8px;border-radius:6px;color:var(--tx2);text-align:left;font-weight:500}
+.dv .led{width:7px;height:7px;border-radius:50%;background:var(--done);margin:0 3.5px;flex:none}
+.dv .led.off{background:none;box-shadow:inset 0 0 0 1.4px var(--fa)}
+.dv small{margin-left:auto;color:var(--fa);font-size:11.5px;font-weight:400}
+.app.behind .sb,.app.behind .main{filter:saturate(.85);opacity:.92}
+
+/* the Settings window */
+.stw{position:absolute;left:50%;top:58px;transform:translateX(-50%);width:800px;height:660px;z-index:50;background:var(--panel);border:1px solid var(--ln2);border-radius:12px;
+  box-shadow:0 0 0 .5px rgba(0,0,0,.4),0 34px 90px -10px rgba(0,0,0,.55),0 10px 30px -10px rgba(0,0,0,.35);display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+.app[data-theme=light] .stw{box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 34px 90px -10px rgba(20,20,40,.35),0 10px 30px -10px rgba(20,20,40,.2)}
+.stt{background:var(--raise);border-bottom:1px solid var(--ln);position:relative}
+.stt .lights{position:absolute;left:14px;top:14px;padding:0}
+.stt h2{font-size:13px;font-weight:600;text-align:center;padding-top:10px;color:var(--tx)}
+.tabs{display:flex;justify-content:center;gap:2px;padding:6px 0 8px}
+.tabs button{display:grid;justify-items:center;gap:3px;width:78px;padding:6px 0 5px;border-radius:7px;font-size:11.5px;color:var(--mu);font-weight:500}
+.tabs button:hover{background:var(--hv)}
+.tabs button.on{background:var(--sel);color:var(--ac2)}
+.app[data-theme=light] .tabs button.on{color:var(--ac)}
+.tabs svg{width:20px;height:20px}
+.stb{overflow:auto;padding:22px 44px 40px;scrollbar-width:thin;scrollbar-color:var(--ln2) transparent}
+.stb h4{font-size:12px;font-weight:500;color:var(--mu);margin:18px 2px 7px}
+.stb h4:first-child{margin-top:0}
+.grp{border:1px solid var(--ln);border-radius:9px;background:var(--raise)}
+.app[data-theme=light] .grp{background:#fff;border-color:var(--ln2)}
+.srow{display:flex;align-items:center;gap:20px;padding:11px 14px;border-bottom:1px solid var(--ln);min-height:48px}
+.srow:last-child{border:0}
+.srow>div:first-child{flex:1;min-width:0}
+.srow b{font-weight:500;color:var(--tx)}
+.srow p{font-size:12px;color:var(--mu);margin-top:1px;text-wrap:pretty}
+.srow.sub{padding-left:28px;background:var(--hv)}
+.note{font-size:12px;color:var(--fa);margin:7px 2px 0;display:flex;gap:7px;align-items:flex-start;text-wrap:pretty}
+.note svg{margin-top:2px}
+
+/* controls */
+.tg{width:30px;height:18px;border-radius:9px;background:var(--ln2);position:relative;flex:none;transition:.15s}
+.tg::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.tg.on{background:var(--ac)}
+.tg.on::after{left:14px}
+.seg{flex:none;display:flex;padding:2px;gap:2px;background:var(--hv);border-radius:7px;box-shadow:inset 0 0 0 1px var(--ln)}
+.app[data-theme=light] .seg{background:#f1f2f5}
+.seg button{padding:2px 10px;font-size:12px;color:var(--mu);border-radius:5px;white-space:nowrap;line-height:20px}
+.seg button.on{background:var(--pop);color:var(--tx);box-shadow:0 0 0 1px var(--ln2),0 1px 2px rgba(0,0,0,.08)}
+.path{display:flex;align-items:center;gap:8px;font:12px ui-monospace,"SF Mono",Menlo,monospace;color:var(--tx2);background:var(--hv);border:1px solid var(--ln);border-radius:6px;padding:4px 9px;white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+.path svg{color:var(--mu)}
+.mono{font:12px ui-monospace,"SF Mono",Menlo,monospace}
+.rng{display:flex;align-items:center;gap:10px;flex:none;color:var(--mu);font-size:12px;font-variant-numeric:tabular-nums}
+.rng input{width:180px;accent-color:var(--ac)}
+.rng .a1{font:400 12px "Literata"}.rng .a2{font:400 18px "Literata"}
+
+/* reader preview */
+.pv{border:1px solid var(--ln2);border-radius:9px;overflow:hidden;margin-bottom:6px}
+.pv .pg{padding:26px 0 30px;transition:background .2s,color .2s;height:214px;overflow:hidden;position:relative}
+.pv .pg::after{content:"";position:absolute;left:0;right:0;bottom:0;height:40px;background:linear-gradient(transparent,var(--pbg))}
+.pv .tx{margin:0 auto;line-height:1.7;transition:max-width .2s,font-size .15s}
+.pv .tx p{text-indent:1.5em;hyphens:auto}.pv .tx p:first-child{text-indent:0}
+.pv .u{text-decoration:underline 2px;text-underline-offset:5px;text-decoration-skip-ink:none}
+.pv .cap{display:flex;justify-content:space-between;padding:7px 12px;font-size:11.5px;color:var(--fa);border-top:1px solid var(--ln);background:var(--raise)}
+
+/* markdown preview */
+.md{font:12px/1.65 ui-monospace,"SF Mono",Menlo,monospace;color:var(--tx2);background:var(--out);border:1px solid var(--ln2);border-radius:9px;padding:14px 16px;white-space:pre-wrap;max-height:300px;overflow:auto}
+.app[data-theme=light] .md{background:#f6f7f9}
+.md .k{color:var(--mu)}.md .h{color:var(--tx);font-weight:600}.md .q{color:var(--tx)}.md .t{color:var(--ac2)}
+.app[data-theme=light] .md .t{color:var(--ac)}
+.files{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.files span{font:11.5px ui-monospace,"SF Mono",Menlo,monospace;color:var(--mu);border:1px solid var(--ln2);border-radius:5px;padding:1px 7px;display:flex;gap:5px;align-items:center}
+.files span.on{color:var(--tx);border-color:var(--ac)}
+.lbls{display:flex;gap:8px}
+.lbls span{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);border:1px solid var(--ln2);border-radius:999px;padding:1px 9px 1px 8px}
+.lbls i{width:10px;height:2px;border-radius:1px}
+.lbls kbd{font:500 10.5px "Inter";color:var(--fa)}
+
+/* devices + shortcuts */
+.dvh{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--ln)}
+.dvh .led{width:8px;height:8px;border-radius:50%;background:var(--done)}
+.dvh .led.off{background:none;box-shadow:inset 0 0 0 1.4px var(--fa)}
+.dvh b{font-weight:600}
+.dvh small{color:var(--mu);font-size:12px}
+.dvh .rb{margin-left:auto}
+.rb{font-size:12px;padding:3px 10px;border:1px solid var(--ln2);border-radius:6px;color:var(--tx2);font-weight:500;white-space:nowrap;flex:none;background:var(--pop)}
+.rb:hover{color:var(--tx)}
+.rb.warn{color:#e5484d}
+.sc{display:grid;grid-template-columns:1fr 1fr;gap:0 28px}
+.sc div{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--ln);font-size:12.5px;color:var(--tx2)}
+.kks{display:inline-flex;gap:3px}
+.kk{font:500 11px/1 "Inter";min-width:19px;height:19px;padding:0 5px;border-radius:4px;border:1px solid var(--ln2);color:var(--mu);background:var(--raise);display:inline-grid;place-items:center;white-space:nowrap}
+.then{font-size:11px;color:var(--fa);margin:0 2px}
+.exg{display:grid;grid-template-columns:330px 1fr;gap:20px;align-items:start}
+.exg .srow{gap:12px}
+.exg .md{height:283px;max-height:none;font-size:11.5px}
+.exg{margin-top:18px}
+</style>
+</head>
+<body>
+<section class="intro" data-fit>
+  <div>
+    <h1><svg class="lg" viewBox="0 0 30 30"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg>Nightstand <span>Settings</span></h1>
+    <p>⌘, opens a separate Settings window, like any Mac app. There are six tabs, and most of what's in them was already decided in the other prototypes: where the library lives, reader defaults, Markdown export for Obsidian, and how each device brings things back. Every change applies straight away, so there's no Save button.</p>
+  </div>
+  <dl>
+    <dt>Data</dt><dd>The same library behind the window. The reader preview is Middlemarch, Chapter 35</dd>
+    <dt>Try</dt><dd>Switch tabs · Theme in 01 changes the app behind it · drag Size in 03 · change the export options in 04 and watch the preview</dd>
+  </dl>
+</section>
+
+<section class="frame" data-fit data-init='{"theme":"dark","tab":"general"}'>
+  <header><span class="n">01</span><b>General</b><p>Dark. Theme, what opens first, and Open Library, with a plain statement of what's sent. Download covers depends on lookups, so it greys out when they're off.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"light","tab":"library"}'>
+  <header><span class="n">02</span><b>Library</b><p>Light. One folder holds everything, and the path shows exactly where a book's file will go. Adding copies by default; watching Downloads is off until you turn it on.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"dark","tab":"reader"}'>
+  <header><span class="n">03</span><b>Reader</b><p>Dark. Defaults for every book, with a live page at the top. Theme matches the app until you pick one, so the Reader follows Light and Dark.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"light","tab":"notes"}'>
+  <header><span class="n">04</span><b>Notes</b><p>Light. Export to a folder in an Obsidian vault and keep it up to date. The preview is the actual file that gets written, and changes as you change the options.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"dark","tab":"devices"}'>
+  <header><span class="n">05</span><b>Devices</b><p>Dark. Each device Nightstand has seen, with the same Automatically / Ask first / Never choice as its page. Shortcuts is the sixth tab.</p></header>
+  <div class="win"></div>
+</section>
+
+<section class="qs" data-fit>
+  <h2>How it behaves</h2>
+  <ol>
+    <li><b>Changes apply as you make them.</b> No Save or Cancel. The Theme and Reader settings change what's on screen behind the window straight away.</li>
+    <li><b>Each setting says what it does.</b> The description under a setting changes with its value, so it always describes what will happen now, not both options.</li>
+    <li><b>The same setting lives in one place.</b> A device's bring-in choice shows on its page and here, and they're the same setting. Reader changes made while reading only affect that book; these are the defaults.</li>
+    <li><b>Nothing here is required.</b> Every default works for someone who never opens Settings: copy books in, Literata at 19 pt, match the app's theme, highlights in automatically, no export until a folder is chosen.</li>
+  </ol>
+</section>
+<section class="qs" data-fit>
+  <h2>Decided</h2>
+  <ol>
+    <li><b>The four labels are fixed.</b> Quote, Idea, Question and Disagree can't be renamed, so filters and exports mean the same thing in every book.</li>
+    <li><b>Export starts off.</b> A new library has no export folder, so the Notes tab shows a Choose folder button and nothing is written. The frame above shows it after a folder has been chosen.</li>
+  </ol>
+</section>
+
+<script>
+const LIB = [{"t": "Project Hail Mary", "a": "Andy Weir", "y": 2021, "ed": "2021", "pub": "Ballantine Books", "pages": 496, "tags": ["Science Fiction"], "d": "Ryland Grace is the sole survivor on a desperate, last-chance mission–and if he fails, humanity and the earth itself will perish. Except that right now, he doesn’t know that. He can’t even remember his own name, let alone the nature of his assignment or how to complete it. All he knows is that he’s been asleep for a very, very long time.", "cover": "https://covers.openlibrary.org/b/id/12455001-L.jpg?default=false", "isbn": "9780593135204", "series": null, "si": null, "olr": 4.52}, {"t": "Dune", "a": "Frank Herbert", "y": 1965, "ed": "2020", "pub": "Ace", "pages": 896, "tags": ["Science Fiction"], "d": "Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world where the only thing of value is the \"spice\" melange, a drug capable of extending life and enhancing consciousness. Coveted across the known universe, melange is a prize worth killing for...", "cover": "https://covers.openlibrary.org/b/id/15110282-L.jpg?default=false", "isbn": "9780441172719", "series": "Dune Chronicles", "si": 1, "olr": 4.31}, {"t": "The Left Hand of Darkness", "a": "Ursula K. Le Guin", "y": 1969, "ed": "2003", "pub": "Ace Books", "pages": 304, "tags": ["Science Fiction"], "d": "One of my favorite novels is The Left Hand of Darkness, by Ursula K Le Guin. For more than 40 years I've been recommending this book to people who want to try science fiction for the first time, and it still serves very well for that.", "cover": "https://covers.openlibrary.org/b/id/6989406-L.jpg?default=false", "isbn": "9780441478125", "series": null, "si": null, "olr": 4.26}, {"t": "Piranesi", "a": "Susanna Clarke", "y": 2020, "ed": "2020", "pub": "Bloomsbury Publishing", "pages": 245, "tags": ["Fantasy"], "d": "Piranesi's house is no ordinary building; its rooms are infinite, its corridors endless, its walls are lined with thousands upon thousands of statues, each one different from all the others.", "cover": "https://covers.openlibrary.org/b/id/10226290-L.jpg?default=false", "isbn": "9781635575637", "series": null, "si": null, "olr": 4.33}, {"t": "Klara and the Sun", "a": "Kazuo Ishiguro", "y": 2019, "ed": "2021", "pub": "Knopf", "pages": 304, "tags": ["Literary Fiction", "Science Fiction"], "d": "\"Klara and the Sun, the first novel by Kazuo Ishiguro since he was awarded the Nobel Prize in Literature, tells the story of Klara, an Artificial Friend with outstanding observational qualities, who, from her place in the store, watches carefully the behavior of those who come in to browse, and of those who pass on the street outside.", "cover": "https://covers.openlibrary.org/b/id/10673548-L.jpg?default=false", "isbn": "9780593318171", "series": null, "si": null, "olr": 3.79}, {"t": "The Remains of the Day", "a": "Kazuo Ishiguro", "y": 1989, "ed": "1993", "pub": "Vintage International", "pages": 254, "tags": ["Literary Fiction"], "d": "In the summer of 1956, Stevens, the ageing butler of Darlington Hall, embarks on a leisurely holiday that will take him deep into the countryside and into his past . .", "cover": "https://covers.openlibrary.org/b/id/15241848-L.jpg?default=false", "isbn": "9780679731726", "series": null, "si": null, "olr": 4.21}, {"t": "Thinking, Fast and Slow", "a": "Daniel Kahneman", "y": 2011, "ed": "2011", "pub": "Farrar, Straus and Giroux", "pages": 548, "tags": ["Nonfiction", "Psychology"], "d": "In his mega bestseller, Thinking, Fast and Slow, Daniel Kahneman, world-famous psychologist and winner of the Nobel Prize in Economics, takes us on a groundbreaking tour of the mind and explains the two systems that drive the way we think. System 1 is fast, intuitive, and emotional; System 2 is slower, more deliberative, and more logical.", "cover": "https://covers.openlibrary.org/b/id/13290711-L.jpg?default=false", "isbn": "9780374275631", "series": null, "si": null, "olr": null}, {"t": "Sapiens", "a": "Yuval Noah Harari", "y": 2011, "ed": "2011", "pub": "Harper", "pages": 464, "tags": ["Nonfiction", "History"], "d": "From a renowned historian comes a groundbreaking narrative of humanity’s creation and evolution—a #1 international bestseller—that explores the ways in which biology and history have defined us and enhanced our understanding of what it means to be “human.”", "cover": "https://covers.openlibrary.org/b/id/14369194-L.jpg?default=false", "isbn": "9780062316097", "series": null, "si": null, "olr": 4.19}, {"t": "Circe", "a": "Madeline Miller", "y": 2018, "ed": "2018", "pub": "Little, Brown and Company", "pages": 393, "tags": ["Fantasy", "Mythology"], "d": "In the house of Helios, god of the sun and mightiest of the Titans, a daughter is born. But Circe is a strange child--not powerful, like her father, nor viciously alluring like her mother.", "cover": "https://covers.openlibrary.org/b/id/8283869-L.jpg?default=false", "isbn": "9780316556347", "series": null, "si": null, "olr": 4.15}, {"t": "The Three-Body Problem", "a": "Cixin Liu", "y": 2008, "ed": "2016", "pub": "A Tor Book / Tom Doherty Associates", "pages": 416, "tags": ["Science Fiction"], "d": "Cixin Liu's trilogy-opening novel about first contact with aliens and the clandestine struggle with them over Earth's future, and its scientific progress in particular. Set against the backdrop of China's Cultural Revolution, a secret military project sends signals into space in an attempt to make contact with aliens—and they succeed.", "cover": "https://covers.openlibrary.org/b/id/8478888-L.jpg?default=false", "isbn": "9780765382030", "series": "Remembrance of Earth's Past", "si": 1, "olr": 3.94}, {"t": "The Dark Forest", "a": "Cixin Liu", "y": 2008, "ed": "2016", "pub": "Tor Books", "pages": 562, "tags": ["Science Fiction"], "d": "In The Dark Forest, Earth is reeling from the revelation of a coming alien invasion-in just four centuries' time.", "cover": "https://covers.openlibrary.org/b/id/14570131-L.jpg?default=false", "isbn": "9780765386694", "series": "Remembrance of Earth's Past", "si": 2, "olr": 4.44}, {"t": "Educated", "a": "Tara Westover", "y": 2018, "ed": "2018", "pub": "Random House", "pages": 384, "tags": ["Nonfiction", "Memoir"], "d": "Educated is a 2018 memoir by the American author Tara Westover. Westover recounts overcoming her survivalist Mormon family in order to go to college, and emphasizes the importance of education in enlarging her world.", "cover": "https://covers.openlibrary.org/b/id/8314077-L.jpg?default=false", "isbn": "9780399590511", "series": null, "si": null, "olr": 4.45}, {"t": "A Gentleman in Moscow", "a": "Amor Towles", "y": 2016, "ed": "2016", "pub": "Viking", "pages": 462, "tags": ["Literary Fiction", "Historical Fiction"], "d": "A Gentleman in Moscow is a 2016 novel by Amor Towles.", "cover": "https://covers.openlibrary.org/b/id/11563116-L.jpg?default=false", "isbn": "9780670026197", "series": null, "si": null, "olr": 3.89}, {"t": "The Hobbit", "a": "J. R. R. Tolkien", "y": 1937, "ed": "2012", "pub": "Mariner Books", "pages": 300, "tags": ["Fantasy", "Classics"], "d": "The Hobbit is a tale of high adventure, undertaken by a company of dwarves in search of dragon-guarded gold. A reluctant partner in this perilous quest is Bilbo Baggins, a comfort-loving unambitious hobbit, who surprises even himself by his resourcefulness and skill as a burglar.", "cover": "https://covers.openlibrary.org/b/id/12003329-L.jpg?default=false", "isbn": "9780547928227", "series": null, "si": null, "olr": 4.3}, {"t": "Middlemarch", "a": "George Eliot", "y": 1871, "ed": "2003", "pub": "Penguin Classics", "pages": 810, "tags": ["Classics", "Literary Fiction"], "d": "Eliot’s epic of 19th century provincial social life, set in a fictitious Midlands town in the years 1830-32, has several interlocking storylines blended effortlessly together to form a fully coherent narrative. Its main themes are the status of women, social expectations and hypocrisy, religion, political reform and education.", "cover": "https://covers.openlibrary.org/b/id/9328284-L.jpg?default=false", "isbn": "9780141439549", "series": null, "si": null, "olr": 4.15}, {"t": "Pride and Prejudice", "a": "Jane Austen", "y": 1813, "ed": "2003", "pub": "Penguin Books", "pages": 435, "tags": ["Classics", "Romance"], "d": "Pride and Prejudice is an 1813 novel of manners written by Jane Austen. The novel follows the character development of Elizabeth Bennet, the dynamic protagonist of the book who learns about the repercussions of hasty judgments and comes to appreciate the difference between superficial goodness and actual goodness. Mr.", "cover": "https://covers.openlibrary.org/b/id/12645114-L.jpg?default=false", "isbn": "9780141439518", "series": null, "si": null, "olr": 4.21}];
+const EXCERPT = ["Here, clearly, was a new legatee; else why was he bidden as a mourner? Here were new possibilities, raising a new uncertainty, which almost checked remark in the mourning-coaches. We are all humiliated by the sudden discovery of a fact which has existed very comfortably and perhaps been staring at us in private while we have been making up our world entirely without it. No one had seen this questionable stranger before except Mary Garth, and she knew nothing more of him than that he had twice been to Stone Court when Mr. Featherstone was down-stairs, and had sat alone with him for several hours. She had found an opportunity of mentioning this to her father, and perhaps Caleb’s were the only eyes, except the lawyer’s, which examined the stranger with more of inquiry than of disgust or suspicion. Caleb Garth, having little expectation and less cupidity, was interested in the verification of his own guesses, and the calmness with which he half smilingly rubbed his chin and shot intelligent glances much as if he were valuing a tree, made a fine contrast with the alarm or scorn visible in other faces when the unknown mourner, whose name was understood to be Rigg, entered the wainscoted parlor and took his seat near the door to make part of the audience when the will should be read. Just then Mr. Solomon and Mr. Jonah were gone up-stairs with the lawyer to search for the will; and Mrs. Waule, seeing two vacant seats between herself and Mr. Borthrop Trumbull, had the spirit to move next to that great authority, who was handling his watch-seals and trimming his outlines with a determination not to show anything so compromising to a man of ability as wonder or surprise.", "“I suppose you know everything about what my poor brother’s done, Mr. Trumbull,” said Mrs. Waule, in the lowest of her woolly tones, while she turned her crape-shadowed bonnet towards Mr. Trumbull’s ear."];
+const LOCAL = {"Project Hail Mary":["reading",64],"Dune":["finished",100],"The Left Hand of Darkness":["want",0],"Piranesi":["want",0],"Klara and the Sun":["want",0],"The Remains of the Day":["finished",100],"Thinking, Fast and Slow":["want",0],"Sapiens":["want",0],"Circe":["finished",100],"The Three-Body Problem":["finished",100],"The Dark Forest":["reading",22],"Educated":["want",0],"A Gentleman in Moscow":["want",0],"The Hobbit":["finished",100],"Middlemarch":["reading",39],"Pride and Prejudice":["finished",100]};
+const C = (id, s = "M") => `https://covers.openlibrary.org/b/id/${id}-${s}.jpg`;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const STATUS = {reading: "Reading", want: "Not started", finished: "Finished"};
+let iconUid = 0;
+const BOOKMARK = "M4.5 2.25h7v11.5L8 11.1l-3.5 2.65z";
+function statusIcon(st, prog = 0) {
+  const svg = inner => `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  if (st === "finished") return svg(`<path d="${BOOKMARK}" fill="var(--done)" stroke="var(--done)" stroke-width="1.4"/><path d="m6.1 6.4 1.4 1.4 2.5-2.7" stroke="#fff" stroke-width="1.4"/>`);
+  if (st === "reading") {
+    const fill = prog < 37.5 ? .25 : prog <= 62.5 ? .5 : .75;
+    const id = "bm" + (++iconUid), h = (8.85 * fill + .25).toFixed(2);
+    return svg(`<defs><clipPath id="${id}"><rect x="0" y="2" width="16" height="${h}"/></clipPath></defs><path d="${BOOKMARK}" fill="var(--prog)" clip-path="url(#${id})"/><path d="${BOOKMARK}" stroke="var(--prog)" stroke-width="1.4"/>`);
+  }
+  return svg(`<path d="${BOOKMARK}" stroke="var(--mu)" stroke-width="1.4"/>`);
+}
+const sv = (inner, w = 14, sw = 1.4) => `<svg width="${w}" height="${w}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const I = {
+  book: sv('<path d="M3 2.5h7.5a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2z"/><path d="M3 11.5a2 2 0 0 1 2-2h7.5"/>'),
+  plus: sv('<path d="M8 3v10M3 8h10"/>', 14, 1.5),
+  x: sv('<path d="m4 4 8 8M12 4l-8 8"/>', 14, 1.5),
+  xs: sv('<path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/>', 12, 1.5),
+  up: sv('<path d="m4 10 4-4 4 4"/>', 14, 1.5),
+  down: sv('<path d="m4 6 4 4 4-4"/>', 14, 1.5),
+  globe: sv('<circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c1.8 1.7 2.6 3.7 2.6 6S9.8 12.3 8 14C6.2 12.3 5.4 10.3 5.4 8S6.2 3.7 8 2z"/>', 12, 1.3),
+  pen: sv('<path d="M10.5 2.8 13.2 5.5 6 12.7l-3.2.5.5-3.2z"/>', 12, 1.4),
+  refresh: sv('<path d="M13 5.5A5.5 5.5 0 0 0 3.2 5M3 10.5A5.5 5.5 0 0 0 12.8 11"/><path d="M13 2.5v3h-3M3 13.5v-3h3"/>'),
+  search: sv('<circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/>', 14, 1.5),
+  check: sv('<path d="m3.5 8.3 2.8 2.8 6.2-6.6"/>', 11, 1.8),
+  img: sv('<rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="6" cy="6.5" r="1.2"/><path d="m2.5 12 3.8-3.6 2.7 2.4 1.8-1.6L14 12"/>', 16),
+  info: sv('<circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.6M8 5.1v.1"/>', 12, 1.5),
+  file: sv('<path d="M4 1.75h5.5L12.5 4.75v9.5H4z"/><path d="M9.5 1.75v3h3"/>', 12),
+};
+
+const ti = inner => sv(inner, 20, 1.3);
+Object.assign(I, {
+  folder: sv('<path d="M2 4.5a1.5 1.5 0 0 1 1.5-1.5h2.8l1.4 1.6h4.8A1.5 1.5 0 0 1 14 6.1v5.4a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 11.5z"/>', 13),
+  reader: sv('<rect x="3.5" y="1.75" width="9" height="12.5" rx="1.6"/><path d="M5.75 4.5h4.5M5.75 6.75h4.5M5.75 9h2.5"/>', 12, 1.3),
+  lockS: sv('<rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>', 12),
+});
+const TAB_ICON = {
+  general: ti('<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v1.7M8 12.5v1.7M14.2 8h-1.7M3.5 8H1.8M12.4 3.6l-1.2 1.2M4.8 11.2l-1.2 1.2M12.4 12.4l-1.2-1.2M4.8 4.8 3.6 3.6"/>'),
+  library: ti('<path d="M3 2.5h7.5a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2z"/><path d="M3 11.5a2 2 0 0 1 2-2h7.5"/>'),
+  reader: ti('<path d="M1.8 12.5 5 3.5l3.2 9M2.9 9.5h4.2M10 8.6c.5-.8 1.2-1.1 2-1.1 1.3 0 2 .7 2 2v3"/><path d="M14 10.6c-2.4 0-3.9.4-3.9 1.2 0 .6.5.9 1.2.9 1.4 0 2.7-.9 2.7-2.1"/>'),
+  notes: ti('<path d="M3 13.5h10"/><path d="m9.5 2.5 3 3-5.5 5.5H4v-3z"/>'),
+  devices: ti('<rect x="4" y="1.75" width="8" height="12.5" rx="1.5"/><path d="M6.5 4.5h3M6.5 6.5h3M6.5 8.5h2"/>'),
+  shortcuts: ti('<rect x="1.75" y="4" width="12.5" height="8" rx="1.5"/><path d="M4.5 6.5h.1M7 6.5h.1M9.5 6.5h.1M12 6.5h.1M5 9.5h6"/>'),
+};
+const TABS = [["general", "General"], ["library", "Library"], ["reader", "Reader"], ["notes", "Notes"], ["devices", "Devices"], ["shortcuts", "Shortcuts"]];
+const RTHEME = {paper: ["#fbfaf7", "#24221f", "#2f9e63"], sepia: ["#f3ead8", "#3b2f20", "#2d8a57"], night: ["#141516", "#d8d5ce", "#4cb782"]};
+const FONTS = {Literata: "'Literata',Georgia,serif", Charter: "Charter,'Bitstream Charter',Georgia,serif", Georgia: "Georgia,serif", "San Francisco": "system-ui,-apple-system,sans-serif"};
+const WIDTH = {Narrow: 29, Medium: 34, Wide: 40};
+const LOGO = '<svg class="lg" viewBox="0 0 30 30"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg>';
+
+function mount(win, init) {
+  const S = Object.assign({theme: "dark", tab: "general"}, init);
+  const P = {appearance: S.theme, open: "last", ol: true, covers: true, updates: true,
+    add: "copy", layout: "author", watch: false,
+    rlayout: "Pages", rtheme: "match", font: "Literata", size: 19, width: "Medium", margin: true, cont: true,
+    export: true, per: "book", fm: true, tags: true, notes: true, revisit: "1 month",
+    kindle: "auto", kobo: "auto", keep: true};
+  const root = document.createElement("div");
+  root.className = "app behind"; root.tabIndex = -1;
+  win.appendChild(root);
+  const books = LIB.map(b => ({...b, st: LOCAL[b.t][0], prog: LOCAL[b.t][1], cover: +b.cover.match(/id\/(\d+)/)[1]}));
+  const $ = s => root.querySelector(s);
+  const tg = (k, on = P[k]) => `<button class="tg${on ? " on" : ""}" data-tg="${k}" role="switch" aria-checked="${!!on}"></button>`;
+  const seg = (k, opts) => `<div class="seg" role="radiogroup">${opts.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return `<button class="${P[k] === v ? "on" : ""}" data-seg="${k}" data-v="${v}" role="radio" aria-checked="${P[k] === v}">${l}</button>`; }).join("")}</div>`;
+  const row = (title, desc, ctl, cls = "") => `<div class="srow ${cls}"><div><b>${title}</b>${desc ? `<p>${desc}</p>` : ""}</div>${ctl}</div>`;
+  const keys = k => `<span class="kks">${k.map(x => x === "then" ? `<span class="then">then</span>` : `<kbd class="kk">${x}</kbd>`).join("")}</span>`;
+
+  function libBg() {
+    const n = st => books.filter(b => b.st === st).length;
+    return `<aside class="sb"><div class="lights"><i></i><i></i><i></i></div>
+      <div class="ws">${LOGO}<b>Nightstand</b><button class="add">${I.plus}</button></div>
+      <button class="nv on">${I.book}All books<span class="ct">16</span></button>
+      <button class="nv">${statusIcon("reading", 50)}Reading<span class="ct">${n("reading")}</span></button>
+      <button class="nv">${statusIcon("want")}Not started<span class="ct">${n("want")}</span></button>
+      <button class="nv">${statusIcon("finished")}Finished<span class="ct">${n("finished")}</span></button>
+      <div class="sec">Notes</div><button class="nv"><span class="ul"><i style="background:var(--prog)"></i></span>All underlines<span class="ct">17</span></button>
+      <div class="sec">Devices</div><button class="dv"><span class="led"></span>Kindle Paperwhite<small>5.4 GB free</small></button><button class="dv"><span class="led off"></span>Kobo Clara 2E<small>Not connected</small></button>
+      <div class="sb-foot"></div></aside>
+      <section class="main"><header class="hd"><span class="crumb">All books<small>16</small></span></header>
+      <div class="list">${["reading", "want", "finished"].map(st => `<div class="gh">${statusIcon(st, 50)}${STATUS[st]}<span class="cn">${n(st)}</span></div>` + books.filter(b => b.st === st).map(b => `<div class="row"><span class="cb"></span>${statusIcon(b.st, b.prog)}<img class="cv" src="${C(b.cover, "S")}" alt=""><span class="tt">${esc(b.t)}</span><span class="au">${esc(b.a)}</span></div>`).join("")).join("")}</div></section>`;
+  }
+
+  const pages = {
+    general: () => `
+      <h4>Appearance</h4><div class="grp">
+        ${row("Theme", "System follows macOS, switching at sunset if you've set it to.", seg("appearance", [["system", "System"], ["light", "Light"], ["dark", "Dark"]]))}
+        ${row("When Nightstand opens", P.open === "last" ? "Opens the book you last had open, at your place." : "Opens on the library.", seg("open", [["last", "The last book"], ["lib", "The library"]]))}
+      </div>
+      <h4>Open Library</h4><div class="grp">
+        ${row("Look up details when books are added", "Fills in authors, dates, descriptions and series that the file doesn't have.", tg("ol"))}
+        ${row("Download covers", "Only for books whose file has no cover, or a poor one.", tg("covers", P.ol && P.covers), P.ol ? "sub" : "sub\" style=\"opacity:.45;pointer-events:none")}
+      </div>
+      <div class="note">${I.lockS}<span>Only a book's title, author and ISBN are sent. Its text, your underlines and your reading never leave this Mac.${P.ol ? "" : " With lookups off, books keep what's in the file and Edit details still lets you search by hand."}</span></div>
+      <h4>Updates</h4><div class="grp">${row("Check for updates automatically", "Nightstand 1.0 (24) · Up to date", tg("updates"))}</div>`,
+    library: () => {
+      const b = {a: "George Eliot", t: "Middlemarch"};
+      const path = P.layout === "author" ? `${b.a}/${b.t}/${b.t}.epub` : `${b.a} - ${b.t}.epub`;
+      return `
+      <h4>Where books are kept</h4><div class="grp">
+        <div class="srow"><div><b>Library folder</b><p>16 books · 41.6 MB. Everything Nightstand keeps is in this one folder, so copying it moves the whole library.</p></div><span class="path">${I.folder}~/Books/Nightstand</span><button class="rb" data-x="Choose a new folder. The library is moved there, then the old folder is removed">Change…</button></div>
+        ${row("Folders inside it", `<span class="mono">~/Books/Nightstand/${esc(path)}</span>`, seg("layout", [["author", "Author / Title"], ["flat", "One folder"]]))}
+      </div>
+      <h4>Adding books</h4><div class="grp">
+        ${row("When you add a file", P.add === "copy" ? "A copy goes into the library. The original stays where it was." : "The file is moved into the library, so there's only one copy.", seg("add", [["copy", "Copy it in"], ["move", "Move it in"]]))}
+        ${row("Add books saved to Downloads", P.watch ? "New EPUB, AZW3, MOBI and PDF files in ~/Downloads are added as they arrive, then left where they are." : "Watches one folder and adds new ebooks as they arrive.", tg("watch"))}
+        ${row("Import from calibre", "Brings in books, covers, details and read status from a calibre library. Your calibre library isn't changed.", `<button class="rb" data-x="Pick your calibre library folder">Import…</button>`)}
+      </div>
+      <h4>Upkeep</h4><div class="grp">
+        ${row("Check files", "Finds books whose files were moved or deleted outside Nightstand. Last checked today.", `<button class="rb" data-x="All 16 books have their files">Check now</button>`)}
+      </div>`;
+    },
+    reader: () => {
+      const th = P.rtheme === "match" ? (S.theme === "light" ? "paper" : "night") : P.rtheme, [bg, ink, u] = RTHEME[th];
+      return `
+      <div class="pv"><div class="pg" style="background:${bg};color:${ink};--pbg:${bg}"><div class="tx" style="font-family:${FONTS[P.font]};font-size:${P.size}px;max-width:min(${WIDTH[P.width]}em,92%)">${EXCERPT.map(p => `<p>${esc(p).replace("We are all humiliated by the sudden discovery of a fact which has existed very comfortably and perhaps been staring at us in private while we have been making up our world entirely without it.", m => `<span class="u" style="text-decoration-color:${u}">${m}</span>`)}</p>`).join("")}</div></div>
+        <div class="cap"><span>Middlemarch, Chapter 35</span><span>${P.font} · ${P.size} pt · ${P.width.toLowerCase()} · ${th[0].toUpperCase() + th.slice(1)}${P.rtheme === "match" ? " (matching the app)" : ""}</span></div></div>
+      <div class="note" style="margin:0 2px 4px">These are the defaults for every book. Changing them while reading (⌘+, ⌘− and the Aa menu) only changes that book.</div>
+      <h4>Page</h4><div class="grp">
+        ${row("Theme", "", seg("rtheme", [["match", "Match the app"], ["paper", "Paper"], ["sepia", "Sepia"], ["night", "Night"]]))}
+        ${row("Font", "", seg("font", Object.keys(FONTS)))}
+        ${row("Size", "", `<div class="rng"><span class="a1">A</span><input type="range" min="15" max="24" step="1" value="${P.size}" data-rng="size" aria-label="Text size"><span class="a2">A</span></div>`)}
+        ${row("Line length", "", seg("width", Object.keys(WIDTH)))}
+        ${row("Layout", P.rlayout === "Pages" ? "Turn pages with the arrow keys or space." : "Each chapter is one long page.", seg("rlayout", ["Pages", "Scroll"]))}
+      </div>
+      <h4>Notes in the margin</h4><div class="grp">
+        ${row("Show notes beside their lines", "When the window is wide enough. Otherwise a mark in the margin opens them.", tg("margin"))}
+      </div>`;
+    },
+    notes: () => {
+      const tag = P.tags ? " <span class=\"t\">#idea</span>" : "";
+      const md = (P.fm ? `<span class="k">---
+title:</span> Middlemarch
+<span class="k">author:</span> George Eliot
+<span class="k">status:</span> Reading
+<span class="k">underlines:</span> 8
+<span class="k">---</span>
+
+` : "") + (P.per === "book" ? `<span class="h"># Middlemarch</span>
+
+<span class="h">## Chapter 35</span>
+
+` : "") + `<span class="q">> We are all humiliated by the sudden discovery of a fact which has existed very comfortably and perhaps been staring at us in private while we have been making up our world entirely without it.</span>
+<span class="k">— p. 317</span>${tag}
+` + (P.notes ? `
+Eliot describing confirmation bias a century before it had a name.
+` : "") + (P.per === "book" ? `
+<span class="q">> One likes to be done well by in every tense, past, present, and future.</span>
+<span class="k">— p. 320</span>${P.tags ? ` <span class="t">#question</span>` : ""}
+<span class="k">…</span>` : "");
+      const files = P.per === "book" ? ["Middlemarch.md", "Pride and Prejudice.md", "Dune.md", "The Hobbit.md"] : ["Middlemarch p317.md", "Middlemarch p320.md", "… 17 files"];
+      return `
+      <h4>Export to Markdown</h4><div class="grp">
+        <div class="srow"><div><b>Folder</b><p>A folder in your Obsidian vault. Nightstand only writes its own files there.</p></div><span class="path">${I.folder}~/Obsidian/Books</span><button class="rb" data-x="Choose a folder">Change…</button></div>
+        ${row("Keep it up to date", P.export ? "Rewritten whenever you underline, edit or remove something. Last written 2 hours ago." : "Export only when you choose Export notes to Markdown.", tg("export"))}
+      </div>
+      <div class="exg"><div><h4>Each file</h4><div class="grp">
+        ${row("Files", "", seg("per", [["book", "Per book"], ["line", "Per underline"]]))}
+        ${row("Book details at the top", "YAML front matter, for Obsidian properties.", tg("fm"))}
+        ${row("Labels as tags", "#quote, #idea, #question, #disagree", tg("tags"))}
+        ${row("Include your notes", "", tg("notes"))}
+      </div></div>
+      <div><h4 style="display:flex;justify-content:space-between">Preview<span style="font-weight:400;color:var(--fa)">17 underlines in ${P.per === "book" ? "4 files" : "17 files"}</span></h4>
+      <div class="files">${files.slice(0, 2).map((f, i) => `<span class="${i === 0 ? "on" : ""}">${f}</span>`).join("")}<span>+ ${P.per === "book" ? "2" : "15"} more</span></div>
+      <div class="md">${md}</div></div></div>
+      <h4>Revisit</h4><div class="grp">
+        ${row("Bring back passages older than", "Revisit, at the top of Notes, only picks underlines at least this old.", seg("revisit", ["1 week", "1 month", "3 months"]))}
+      </div>
+      <h4>Labels</h4><div class="grp">${row("The four labels", "Fixed, so filters and exports mean the same thing in every book.", `<div class="lbls">${[["Quote", "var(--prog)", 1], ["Idea", "var(--done)", 2], ["Question", "var(--ac2)", 3], ["Disagree", "#d0517a", 4]].map(([l, c, k]) => `<span><i style="background:${c}"></i>${l}<kbd>${k}</kbd></span>`).join("")}</div>`)}</div>`;
+    },
+    devices: () => {
+      const dev = (name, key, conn, sub, extra) => `<div class="grp" style="margin-bottom:12px"><div class="dvh"><span class="led${conn ? "" : " off"}"></span><div><b>${name}</b><br><small>${sub}</small></div><button class="rb" data-x="${conn ? "Eject first, then forget it" : `${name} forgotten. It'll be set up again next time it's plugged in`}">Forget</button></div>
+        ${row(key === "kindle" ? "Highlights" : "Highlights and reading progress", key === "kindle" ? "Read from My Clippings.txt when it connects, and added to Notes." : "Highlights go to Notes. Positions move books to Reading or Finished.", seg(key, [["auto", "Automatically"], ["ask", "Ask first"], ["never", "Never"]]))}${extra}</div>`;
+      return `<h4>Remembered devices</h4>
+      ${dev("Kindle Paperwhite", "kindle", true, "Connected over USB · 5.4 GB free", row("Keep converted copies", "Books converted to AZW3 for the Kindle keep the AZW3 in the library, so it only happens once.", tg("keep")))}
+      ${dev("Kobo Clara 2E", "kobo", false, "Last connected 19 October · 2 books waiting to send", "")}
+      <div class="note">${I.info}<span>Devices connect over USB. Plug one in and it appears in the sidebar. Nothing is ever sent to a device automatically.</span></div>`;
+    },
+    shortcuts: () => {
+      const g = (t, list) => `<h4>${t}</h4><div class="sc">${list.map(([l, k]) => `<div>${l}${keys(k)}</div>`).join("")}</div>`;
+      return g("Everywhere", [["Search and commands", ["⌘", "K"]], ["Add books", ["⌘", "O"]], ["Settings", ["⌘", ","]], ["All shortcuts", ["?"]]]) +
+        g("Go to", [["All books", ["G", "then", "A"]], ["Reading", ["G", "then", "R"]], ["Not started", ["G", "then", "N"]], ["Finished", ["G", "then", "F"]], ["All underlines", ["G", "then", "U"]], ["Back to the library", ["⌘", "L"]]]) +
+        g("Library", [["Move", ["↑", "↓"]], ["Open the book", ["↵"]], ["Select", ["X"]], ["Send to device", ["S"]], ["Edit details", ["E"]], ["Peek", ["Space"]]]) +
+        g("Reader", [["Next or previous page", ["←", "→"]], ["Underline as Quote, Idea, Question, Disagree", ["1–4"]], ["Add a note", ["N"]], ["Bookmark", ["⌘", "D"]], ["Bigger or smaller text", ["⌘", "+ −"]], ["Contents", ["⌘", "T"]]]) +
+        `<div class="note" style="margin-top:14px">${I.info}<span>Shortcuts can't be changed yet. Every command is also in ⌘K, with its shortcut beside it.</span></div>`;
+    },
+  };
+
+  let tt;
+  function draw(keepScroll) {
+    const y = keepScroll ? $(".stb")?.scrollTop : 0;
+    root.dataset.theme = S.theme;
+    root.innerHTML = libBg() + `<div class="stw" role="dialog" aria-label="Settings">
+      <div class="stt"><div class="lights"><i></i><i></i><i></i></div><h2>${TABS.find(t => t[0] === S.tab)[1]}</h2>
+        <div class="tabs" role="tablist">${TABS.map(([k, l]) => `<button class="${S.tab === k ? "on" : ""}" data-tab="${k}" role="tab" aria-selected="${S.tab === k}">${TAB_ICON[k]}${l}</button>`).join("")}</div></div>
+      <div class="stb">${pages[S.tab]()}</div></div><div class="toast" role="status"></div>`;
+    if (y) $(".stb").scrollTop = y;
+  }
+  const toast = m => { const t = $(".toast"); t.textContent = m; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 2600); };
+  root.addEventListener("click", e => {
+    const t = e.target, tab = t.closest("[data-tab]"), g = t.closest("[data-tg]"), s = t.closest("[data-seg]"), x = t.closest("[data-x]");
+    if (tab) { S.tab = tab.dataset.tab; draw(); return; }
+    if (g) { P[g.dataset.tg] = !P[g.dataset.tg]; draw(true); return; }
+    if (s) { P[s.dataset.seg] = s.dataset.v; if (s.dataset.seg === "appearance") S.theme = s.dataset.v === "system" ? "dark" : s.dataset.v; draw(true); if (s.dataset.seg === "appearance" && s.dataset.v === "system") toast("macOS is in Dark mode"); return; }
+    if (x) { toast(x.dataset.x); return; }
+  });
+  root.addEventListener("input", e => { const r = e.target.closest("[data-rng]"); if (r) { P[r.dataset.rng] = +r.value; const tx = $(".pv .tx"); tx.style.fontSize = r.value + "px"; $(".pv .cap span:last-child").textContent = $(".pv .cap span:last-child").textContent.replace(/\d+ pt/, r.value + " pt"); } });
+  draw();
+}
+
+let scale = 1;
+function fit() {
+  scale = Math.min(1, (innerWidth - 48) / 1280);
+  document.querySelectorAll("[data-fit]").forEach(el => {
+    el.style.transform = scale < 1 ? `scale(${scale})` : "";
+    el.style.marginLeft = scale < 1 ? "24px" : "";
+    el.style.marginBottom = scale < 1 ? `${-(el.offsetHeight * (1 - scale)) + 40}px` : "";
+  });
+}
+fit(); addEventListener("resize", fit);
+document.querySelectorAll(".frame").forEach(f => mount(f.querySelector(".win"), JSON.parse(f.dataset.init)));
+</script>
+</body>
+</html>

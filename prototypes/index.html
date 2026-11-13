@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightstand · Prototypes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:opsz,wght@7..72,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#e7e5e0;color:#1b1c1f;font:14px/1.5 "Inter",sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
+body{padding:64px 24px 96px}
+a{color:inherit;text-decoration:none}
+.pg{max-width:1180px;margin:0 auto}
+header{display:grid;grid-template-columns:1fr 340px;gap:64px;align-items:end;margin-bottom:44px}
+.brand{display:flex;align-items:center;gap:16px}
+.brand svg{width:52px;height:52px}
+.word{font:600 44px/1 "Literata";letter-spacing:-.02em;color:#1a2147}
+.i{position:relative}.i::after{content:"";position:absolute;left:50%;top:.33em;width:.15em;height:.15em;margin-left:-.1em;border-radius:50%;background:#f2b544}
+header p{color:#4c4a45;font-size:15px;max-width:620px;margin-top:16px}
+dl{font-size:12.5px;color:#4c4a45;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+dt{color:#8a8780}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.grid .card:last-child:nth-child(3n+1){grid-column:span 1}
+.card{background:#fbfaf7;border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.07),0 12px 30px -18px rgba(30,25,15,.3);display:flex;flex-direction:column;transition:box-shadow .15s,transform .15s}
+.card:hover{box-shadow:0 0 0 1px rgba(0,0,0,.14),0 18px 36px -18px rgba(30,25,15,.4);transform:translateY(-2px)}
+.card img{display:block;width:100%;aspect-ratio:8/5;object-fit:cover;object-position:top left;border-bottom:1px solid #ebe8e1;background:#e8e4da}
+.card .b{padding:16px 18px 18px;display:grid;gap:6px}
+.card h2{font-size:15px;font-weight:600;display:flex;align-items:baseline;gap:8px}
+.card h2 span{font-size:12px;font-weight:500;color:#8a8780;font-variant-numeric:tabular-nums}
+.card p{font-size:13px;color:#4c4a45}
+.card.start h2 span{color:#5e6ad2}
+.card .meta{font-size:12px;color:#8a8780}
+.flow{margin:44px 0 0;border-top:1px solid #d3d0c9;padding-top:24px;display:grid;grid-template-columns:240px 1fr;gap:64px}
+.flow h3,.old h3{font:600 15px "Inter"}
+.flow ol{list-style:none;display:grid;gap:8px;color:#3c3a36;font-size:13px;max-width:760px}
+.flow li b{font-weight:600}
+.old{margin-top:32px;border-top:1px solid #d3d0c9;padding-top:24px;display:grid;grid-template-columns:240px 1fr;gap:64px}
+.old ul{list-style:none;display:grid;gap:6px;font-size:13px;color:#4c4a45}
+.old a{color:#1b1c1f;text-decoration:underline;text-decoration-color:#c9c4ba;text-underline-offset:3px}
+.old a:hover{text-decoration-color:#1b1c1f}
+@media (max-width:900px){header,.flow,.old{grid-template-columns:1fr;gap:20px}.grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="pg">
+<header>
+  <div>
+    <div class="brand"><svg viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg><span class="word">N<span class="i">ı</span>ghtstand</span></div>
+    <p>A desktop app for the books on your own disk: a library grouped by reading status, a reader where underlining is the main action, and Notes that bring back the lines you kept. Everything is local, with book data from Open Library.</p>
+  </div>
+  <dl>
+    <dt>Platform</dt><dd>macOS desktop, local library, no account</dd>
+    <dt>Library</dt><dd>~/Books/Nightstand</dd>
+    <dt>Prototypes</dt><dd>Standalone HTML. Each page has its own "Try" notes at the top</dd>
+  </dl>
+</header>
+
+<div class="grid">
+  <a class="card start" href="flow.html"><img src="thumbs/flow.jpg" alt="The whole app in one window, with a seven-step path above it"><div class="b"><h2>The whole app <span>Start here</span></h2><p>Every screen in one working window, sharing the same books and underlines. A seven-step path ticks off as you go: open a book, underline, find it in Notes, send to the Kindle, ⌘K, Settings.</p><span class="meta">The other prototypes go deeper on each screen</span></div></a>
+  <a class="card" href="calibre-canvas.html"><img src="thumbs/library.jpg" alt="Library: books grouped by Reading, Not started and Finished"><div class="b"><h2>Library <span>01</span></h2><p>Books grouped by status, with shelves, a peek panel and keyboard navigation. Dark and light.</p><span class="meta">The "Queue" direction on the exploration canvas</span></div></a>
+  <a class="card" href="reader.html"><img src="thumbs/reader.jpg" alt="Reader showing Middlemarch Chapter 35 with an underline and a margin note"><div class="b"><h2>Reader <span>02</span></h2><p>Pages layout by default. Select a passage to underline it as a Quote, Idea, Question or Disagree.</p><span class="meta">Middlemarch, Chapter 35</span></div></a>
+  <a class="card" href="notes.html"><img src="thumbs/notes.jpg" alt="Notes with a Revisit passage and underlines grouped by day"><div class="b"><h2>Notes <span>03</span></h2><p>Every underline in one place. Revisit brings back an older passage each time, and export writes Markdown for Obsidian.</p><span class="meta">17 underlines in 4 books</span></div></a>
+  <a class="card" href="add-books.html"><img src="thumbs/add-books.jpg" alt="First run: drop zone and calibre import"><div class="b"><h2>Adding books <span>04</span></h2><p>Drop files anywhere. They're copied into the library and matched on Open Library; only the ones that need a decision ask for one.</p><span class="meta">Live Open Library lookups on real drops</span></div></a>
+  <a class="card" href="edit-details.html"><img src="thumbs/edit-details.jpg" alt="Edit details panel beside the library"><div class="b"><h2>Editing details <span>05</span></h2><p>A panel beside the library. Each field shows where its value came from, and refreshing never overwrites your changes without asking.</p><span class="meta">Single book, cover, refresh, bulk and search</span></div></a>
+  <a class="card" href="devices.html"><img src="thumbs/devices.jpg" alt="A connected Kindle's page: its books, storage and new highlights"><div class="b"><h2>Devices <span>06</span></h2><p>Send books to a Kindle or Kobo in a format it reads, and bring back highlights and reading progress for review.</p><span class="meta">USB only for now</span></div></a>
+  <a class="card" href="search.html"><img src="thumbs/search.jpg" alt="The command palette over the library, showing a book and three underlines for the search pri"><div class="b"><h2>Search and commands <span>07</span></h2><p>⌘K from anywhere finds books, underlines and commands. It starts from where you are, and Tab on a book lists its actions.</p><span class="meta">Real Middlemarch text in the Reader frame</span></div></a>
+  <a class="card" href="settings.html"><img src="thumbs/settings.jpg" alt="The Settings window on the Notes tab, with Markdown export options and a preview of the file"><div class="b"><h2>Settings <span>08</span></h2><p>A separate window opened with ⌘,. Six tabs, changes apply straight away, and previews show the page and the exported file.</p><span class="meta">General, Library, Reader, Notes, Devices, Shortcuts</span></div></a>
+  <a class="card" href="brand.html"><img src="thumbs/brand.jpg" alt="Nightstand app icon on light and dark Docks"><div class="b"><h2>Brand <span>09</span></h2><p>The mark, app icon, Literata wordmark, colour, type and voice.</p><span class="meta">A light, a book and the table it's on</span></div></a>
+</div>
+
+<section class="flow">
+  <h3>How they connect</h3>
+  <ol>
+    <li><b>Adding books</b> fills the <b>Library</b>. Every book arrives as Not started.</li>
+    <li>Press ↵ on a book in the Library to open it in the <b>Reader</b>. Opening a book moves it to Reading.</li>
+    <li>Underlines made in the Reader appear in <b>Notes</b>, which is in the Library sidebar under All underlines.</li>
+    <li><b>Editing details</b> opens from a book in the Library, one book or many at a time.</li>
+    <li><b>Devices</b> appear in the Library sidebar when plugged in. Selected books are sent with S, and highlights come back to Notes.</li>
+    <li><b>Search and commands</b> (⌘K) opens over every screen. In the Reader it searches the open book first.</li>
+    <li><b>Settings</b> (⌘,) opens in its own window over whatever is on screen.</li>
+  </ol>
+</section>
+
+<section class="old">
+  <h3>Building it</h3>
+  <ul>
+    <li><a href="stack.html">Stack and first version</a>: Tauri 2 (decided), what's in version 1, and what to test before building.</li>
+  </ul>
+</section>
+
+<section class="old">
+  <h3>Earlier explorations</h3>
+  <ul>
+    <li><a href="calibre-canvas.html">Exploration canvas</a>: the three library directions (Reading Room, Command Deck, Queue). Queue was carried forward.</li>
+    <li><a href="status-icons.html">Status icons</a>: the bookmark icons that fill in quarter steps.</li>
+    <li><a href="brand-underline.html">Underline brand</a>: the sheet from before the name changed.</li>
+  </ul>
+</section>
+</div>
+</body>
+</html>

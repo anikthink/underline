@@ -1,0 +1,28 @@
+<!doctype html><meta charset="utf-8"><title>AZW3 check</title>
+<style>body{font:13px system-ui;margin:16px;background:#eee}pre{white-space:pre-wrap}.row{display:flex;gap:12px}iframe{width:420px;height:600px;border:1px solid #bbb;background:#fff}img.cv{height:200px;border:1px solid #bbb}</style>
+<pre id="out">running…</pre><div class="row" id="shots"></div>
+<script type="module">
+import { makeBook } from '../vendor-dl/foliate-js-main/view.js'
+const out = document.getElementById('out'), shots = document.getElementById('shots'), res = {}
+const show = [['pg1342', /^Chapter XXIV/i], ['pg145', /^CHAPTER XXXV\b/i], ['pg11', /^CHAPTER I\b/i]]
+for (const name of ['pg145', 'pg1342', 'pg11', 'pg84']) {
+  try {
+    const blob = await (await fetch(`out/${name}.azw3`)).blob()
+    const book = await makeBook(new File([blob], `${name}.azw3`))
+    const flat = []; const walk = l => l?.forEach(t => { flat.push(t); walk(t.subitems) }); walk(book.toc)
+    const cover = await book.getCover?.()
+    let imgs = 0, broken = 0, chars = 0
+    for (const s of book.sections) { const doc = await s.createDocument(); chars += doc.body?.textContent.length || 0; for (const im of doc.querySelectorAll('img')) { imgs++; if (!im.getAttribute('src')) broken++ } }
+    res[name] = {title: book.metadata?.title, author: [].concat(book.metadata?.author || []).map(a => a.name || a).join(', '), sections: book.sections.length, toc: flat.length, tocSample: flat.slice(0, 4).map(t => t.label).concat(['…'], flat.slice(-2).map(t => t.label)), cover: cover ? cover.size : 0, imgs, broken, chars}
+    const want = show.find(s => s[0] === name)
+    if (want) {
+      const t = flat.find(t => want[1].test(t.label.trim()))
+      const idx = t ? book.splitTOCHref ? (await book.splitTOCHref(t.href))[0] : 0 : 0
+      const url = await book.sections[idx].load()
+      const f = document.createElement('iframe'); f.src = url; shots.append(f); res[name].shown = t?.label
+      if (cover) { const im = document.createElement('img'); im.className = 'cv'; im.src = URL.createObjectURL(cover); shots.append(im) }
+    }
+  } catch (e) { res[name] = {error: String(e), stack: e.stack?.split('\n').slice(0, 3)} }
+}
+out.textContent = JSON.stringify(res, null, 1); window.RESULT = res
+</script>

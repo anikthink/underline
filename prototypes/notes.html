@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightstand · Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;1,7..72,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#e7e5e0;color:#1b1c1f;font:14px/1.5 "Inter",sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
+body{padding:56px 0 96px}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+
+/* canvas shell (same as reader.html) */
+.intro{width:1280px;margin:0 auto 40px;display:grid;grid-template-columns:1fr 380px;gap:64px;align-items:end;transform-origin:top left}
+.intro h1{font:600 30px/1.15 "Inter";letter-spacing:-.02em;display:flex;align-items:center;gap:12px}
+.intro h1 .lg{width:30px;height:30px}
+.intro h1 span{color:#8a8780;font-weight:500}
+.intro p{color:#4c4a45;max-width:640px;margin-top:12px;font-size:15px}
+.intro dl{font-size:12.5px;color:#4c4a45;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.intro dt{color:#8a8780}
+.kb{font:500 10.5px "Inter";color:#8a8780;border:1px solid #cfccc5;border-radius:4px;padding:0 4px;line-height:15px}
+.frame{width:1280px;margin:0 auto 64px;transform-origin:top left}
+.frame>header{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+.frame>header b{font:600 13px "Inter";color:#1b1c1f}
+.frame>header .n{font:500 12px "Inter";color:#8a8780;font-variant-numeric:tabular-nums}
+.frame>header p{color:#5c5a54;font-size:13px}
+.win{width:1280px;height:800px;border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.09),0 30px 70px -20px rgba(30,25,15,.35),0 8px 20px -10px rgba(30,25,15,.2);position:relative}
+.qs{width:1280px;margin:0 auto;border-top:1px solid #d3d0c9;padding-top:28px;display:grid;grid-template-columns:240px 1fr;gap:64px}
+.qs h2{font:600 15px "Inter"}
+.qs ol{padding-left:18px;color:#3c3a36;display:grid;gap:10px;max-width:760px}
+.qs li::marker{color:#8a8780;font-variant-numeric:tabular-nums}
+.qs li b{font-weight:600}
+
+/* app: tokens from the library (option 3) */
+.app{--out:#08090a;--panel:#101113;--raise:#17181b;--pop:#1c1d21;--ln:rgba(255,255,255,.07);--ln2:rgba(255,255,255,.11);
+  --tx:#ecedee;--tx2:#c9cbcf;--mu:#8a8f98;--fa:#62666d;--hv:rgba(255,255,255,.035);--sel:rgba(255,255,255,.06);
+  --ac:#5e6ad2;--ac2:#7c85e0;--prog:#f2c94c;--done:#4cb782;--shadow:0 16px 48px rgba(0,0,0,.55);
+  --u1:#e6bc3f;--u2:#4cb782;--u3:#8b93ea;--u4:#e77fa0;--hl:rgba(242,201,76,.22);
+  position:absolute;inset:0;background:var(--out);color:var(--tx);font:13px/1.45 "Inter",sans-serif;display:grid;grid-template-columns:232px 1fr;outline:none}
+.app[data-theme=light]{--out:#f4f5f8;--panel:#fff;--raise:#f7f8fa;--pop:#fff;--ln:#e8e9ed;--ln2:#dcdde2;--tx:#1b1c1f;--tx2:#3c3f44;--mu:#6b6f76;--fa:#9a9ea6;
+  --hv:rgba(0,0,0,.025);--sel:rgba(94,106,210,.07);--done:#2f9e63;--prog:#d9a400;--shadow:0 16px 48px rgba(20,20,40,.16);
+  --u1:#d9a400;--u2:#2f9e63;--u3:#5e6ad2;--u4:#d0517a;--hl:rgba(217,164,0,.2)}
+.app svg{display:block;flex:none}
+.app :focus-visible{outline:2px solid var(--ac);outline-offset:-1px;border-radius:5px}
+.c1{--uc:var(--u1)}.c2{--uc:var(--u2)}.c3{--uc:var(--u3)}.c4{--uc:var(--u4)}
+
+/* sidebar */
+.sb{display:flex;flex-direction:column;padding:10px 8px;gap:2px;min-height:0}
+.lights{display:flex;gap:8px;padding:4px 8px 12px}
+.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57}
+.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.ws{display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:6px}
+.ws .lg{width:20px;height:20px}
+.ws b{font-weight:600;font-size:13px}
+.nv{display:flex;align-items:center;gap:9px;width:100%;padding:5px 8px;border-radius:6px;color:var(--tx2);text-align:left;font-weight:500}
+.nv:hover{background:var(--hv)}
+.nv.on{background:var(--sel);color:var(--tx)}
+.nv .ct{margin-left:auto;color:var(--fa);font-size:12px;font-weight:400;font-variant-numeric:tabular-nums}
+.nv .ul{width:14px;display:grid;place-items:center}
+.nv .ul i{width:12px;height:2px;border-radius:1px;background:var(--tx2)}
+.nv.on .ul i{background:var(--tx)}
+.nv .sub{width:14px;display:grid;place-items:center}
+.nv .sub i{width:10px;height:2px;border-radius:1px;background:var(--uc)}
+.sec{padding:16px 8px 4px;font-size:11.5px;font-weight:500;color:var(--fa)}
+.sb-foot{margin-top:auto;padding:8px}
+.theme{display:flex;gap:2px;padding:3px;background:var(--hv);border-radius:7px}
+.theme button{flex:1;padding:3px 0;border-radius:5px;font-size:12px;color:var(--mu)}
+.theme button.on{background:var(--panel);color:var(--tx);box-shadow:0 0 0 1px var(--ln)}
+
+/* main */
+.main{margin:8px 8px 8px 0;background:var(--panel);border:1px solid var(--ln);border-radius:9px;display:grid;grid-template-rows:44px 44px 1fr;min-height:0;overflow:hidden;position:relative}
+.hd{display:flex;align-items:center;gap:10px;padding:0 14px 0 18px;border-bottom:1px solid var(--ln)}
+.hd .crumb{font-weight:500;color:var(--tx)}
+.hd .crumb small{color:var(--fa);font-weight:400;margin-left:8px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.tabs{display:flex;gap:4px;margin-left:10px}
+.tabs button{padding:3px 10px;border-radius:6px;border:1px solid var(--ln);color:var(--mu);font-weight:500;font-size:12px}
+.tabs button.on{color:var(--tx);background:var(--raise);border-color:var(--ln2)}
+.hd .rt{margin-left:auto;display:flex;gap:6px}
+.hbtn{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:6px;border:1px solid var(--ln);color:var(--tx2);font-weight:500;font-size:12px}
+.hbtn:hover{background:var(--hv)}
+.fbar{display:flex;align-items:center;gap:8px;padding:0 14px 0 18px;border-bottom:1px solid var(--ln)}
+.fbar .si{color:var(--fa)}
+.q{flex:1;min-width:120px;border:0;background:none;outline:none;color:var(--tx);font-size:12.5px;padding:6px 0}
+.q::placeholder{color:var(--fa)}
+.lchip{height:26px;display:inline-flex;align-items:center;gap:6px;padding:0 9px;border-radius:6px;border:1px solid var(--ln);color:var(--tx2);font-size:12px;font-weight:500;white-space:nowrap}
+.lchip i{width:10px;height:2px;border-radius:1px;background:var(--uc)}
+.lchip small{color:var(--fa);font-weight:400;font-variant-numeric:tabular-nums}
+.lchip:hover{background:var(--hv)}
+.lchip.on{border-color:var(--uc);background:color-mix(in srgb,var(--uc) 10%,transparent);color:var(--tx)}
+.lchip.nn.on{border-color:var(--ln2);background:var(--raise)}
+.fbar .dv{width:1px;height:16px;background:var(--ln2);margin:0 2px}
+.kh{font-size:11.5px;color:var(--fa);display:flex;gap:12px;white-space:nowrap;margin-left:6px}
+kbd{font:500 10.5px "Inter";border:1px solid var(--ln2);border-radius:4px;padding:0 4px;color:var(--mu);background:var(--raise);margin-right:3px}
+.list{overflow:auto;outline:none;position:relative;scrollbar-width:thin;scrollbar-color:var(--ln2) transparent}
+.col{max-width:780px;margin:0 auto;padding:24px 32px 80px}
+
+/* revisit */
+.rv{padding:26px 28px 22px;border:1px solid var(--ln);border-radius:10px;background:var(--raise);margin-bottom:28px;position:relative}
+.rv .k{font-size:11.5px;color:var(--mu);display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.rv .k b{font-weight:500;color:var(--tx2)}
+.rv blockquote{font:400 23px/1.42 "Literata",Georgia,serif;letter-spacing:-.005em;color:var(--tx);text-wrap:pretty}
+.rv blockquote span{text-decoration:underline;text-decoration-color:var(--uc);text-decoration-thickness:2px;text-underline-offset:6px;text-decoration-skip-ink:none}
+.rv .nt{margin-top:14px;color:var(--tx2);font-size:13px}
+.rv .ft{display:flex;align-items:center;gap:10px;margin-top:18px}
+.rv .src{display:flex;align-items:center;gap:9px;color:var(--mu);font-size:12px;margin-right:auto}
+.rv .src b{color:var(--tx2);font-weight:500}
+.rv .src img,.rv .src .ph{width:22px;height:32px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px var(--ln);flex:none}
+.rv.swap blockquote,.rv.swap .nt,.rv.swap .src{animation:swap .35s ease-out}
+@keyframes swap{from{opacity:0;transform:translateY(4px)}}
+
+/* groups + items */
+.gh{display:flex;align-items:baseline;gap:8px;padding:18px 0 8px;font-weight:500;color:var(--tx);border-bottom:1px solid var(--ln);position:sticky;top:0;background:var(--panel);z-index:2}
+.gh .cn{color:var(--fa);font-weight:400;font-variant-numeric:tabular-nums}
+.gh .bar{display:flex;height:4px;width:120px;border-radius:2px;overflow:hidden;margin-left:auto;align-self:center;gap:1px}
+.gh .bar i{background:var(--uc)}
+.bh{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:22px 0 12px;border-bottom:1px solid var(--ln);position:sticky;top:0;background:var(--panel);z-index:2}
+.bh img,.bh .ph{width:44px;height:64px;border-radius:3px;object-fit:cover;box-shadow:0 0 0 1px var(--ln)}
+.bh b{font-size:14px;font-weight:600;display:block}
+.bh .au{color:var(--mu);font-size:12.5px;display:flex;align-items:center;gap:8px;margin-top:2px}
+.bh .au span{display:inline-flex;align-items:center;gap:5px}
+.bh .rt{display:flex;flex-direction:column;align-items:flex-end;gap:7px;color:var(--fa);font-size:12px;font-variant-numeric:tabular-nums}
+.bh .bar{display:flex;height:4px;width:120px;border-radius:2px;overflow:hidden;gap:1px}
+.bh .bar i{background:var(--uc)}
+.it{display:grid;grid-template-columns:1fr auto;gap:8px 18px;padding:16px 14px 16px 16px;margin:0 -16px;border-radius:8px;position:relative;cursor:default}
+.it+.it::after{content:"";position:absolute;left:16px;right:16px;top:0;border-top:1px solid var(--ln)}
+.it:hover::after,.it.focus::after,.it:hover+.it::after,.it.focus+.it::after{border-color:transparent}
+.it:hover{background:var(--hv)}
+.it.focus{background:var(--sel)}
+.it.focus::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:2px;border-radius:1px;background:var(--ac)}
+.it.flash{animation:fl 1s ease-out}
+@keyframes fl{from{background:color-mix(in srgb,var(--uc) 22%,transparent)}}
+.it q{grid-column:1;quotes:none;font:15.5px/1.6 "Literata",Georgia,serif;color:var(--tx);text-wrap:pretty}
+.it q span{text-decoration:underline;text-decoration-color:var(--uc);text-decoration-thickness:1.5px;text-underline-offset:5px;text-decoration-skip-ink:none}
+.it .nt{grid-column:1;color:var(--tx2);font-size:13px;line-height:1.5}
+.it .mt{grid-column:1;display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12px;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.it .mt img,.it .mt .ph{width:13px;height:19px;border-radius:1.5px;object-fit:cover;box-shadow:0 0 0 1px var(--ln)}
+.it .mt b{color:var(--tx2);font-weight:500}
+.it .mt .dot{color:var(--fa)}
+.lab{display:inline-flex;align-items:center;gap:5px;color:var(--tx2);border-radius:5px;padding:1px 6px 1px 5px;margin:-1px -6px -1px -5px}
+.lab i{width:10px;height:2px;border-radius:1px;background:var(--uc)}
+button.lab:hover{background:var(--hv)}
+.it .acts{grid-column:2;grid-row:1/4;display:flex;gap:2px;align-self:start;opacity:0;transition:opacity .1s}
+.it:hover .acts,.it.focus .acts{opacity:1}
+.ib{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--mu)}
+.ib:hover{background:var(--hv);color:var(--tx)}
+mark.hl{background:var(--hl);color:inherit;border-radius:2px;padding:0 1px;margin:0 -1px}
+.empty{padding:80px 0;text-align:center;color:var(--mu)}
+.empty b{display:block;color:var(--tx);font-weight:500;margin-bottom:4px}
+.empty button{margin-top:14px}
+.empty .ei{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;margin:0 auto 14px;background:var(--raise);box-shadow:0 0 0 1px var(--ln)}
+.empty .ei svg{width:16px;height:16px}
+.empty .acts2{display:flex;gap:6px;justify-content:center}
+.empty .acts2 button{display:inline-flex}
+
+/* compact revisit, used on empty states */
+.rv.sm{max-width:540px;margin:40px auto 0;padding:18px 20px 16px;text-align:left}
+.rv.sm .k{margin-bottom:10px}
+.rv.sm blockquote{font-size:17px;line-height:1.5}
+.rv.sm blockquote span{text-decoration-thickness:1.5px;text-underline-offset:5px}
+.rv.sm .nt{margin-top:10px;font-size:12.5px}
+.rv.sm .ft{margin-top:14px}
+
+/* export menu */
+.menu.ex{min-width:300px}
+.menu.ex button{align-items:flex-start;padding:7px 8px}
+.menu.ex button svg{margin-top:2px;color:var(--mu)}
+.menu.ex span{display:grid;gap:1px}
+.menu.ex small{color:var(--fa);font-size:11.5px}
+.menu.ex small.sync{color:var(--done)}
+
+/* export-to-folder dialog */
+.scrim{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:rgba(0,0,0,.5);animation:fade .15s ease-out}
+.app[data-theme=light] .scrim{background:rgba(20,22,40,.18)}
+@keyframes fade{from{opacity:0}}
+.dlg{width:780px;height:580px;background:var(--pop);border:1px solid var(--ln2);border-radius:12px;box-shadow:var(--shadow);display:grid;grid-template-rows:auto auto 1fr auto;overflow:hidden;animation:pop .16s ease-out}
+.dlg .dh{padding:18px 20px 0;display:flex;align-items:flex-start;gap:12px}
+.dlg .dh h3{font-size:14px;font-weight:600}
+.dlg .dh p{color:var(--mu);font-size:12.5px;margin-top:2px}
+.dlg .dh .ib{margin:-4px -6px 0 auto}
+.fold{margin:14px 20px 16px;display:flex;align-items:center;gap:10px;padding:5px 5px 5px 10px;border:1px solid var(--ln2);border-radius:7px;background:var(--raise)}
+.fold svg{color:var(--mu)}
+.fold code{font:12.5px ui-monospace,"SF Mono",Menlo,monospace;color:var(--tx);margin-right:auto}
+.dbd{display:grid;grid-template-columns:260px 1fr;border-top:1px solid var(--ln);min-height:0}
+.files{border-right:1px solid var(--ln);padding:8px;overflow:auto;display:flex;flex-direction:column;gap:1px}
+.files .fh{padding:4px 8px 6px;font-size:11.5px;color:var(--fa);display:flex}
+.files .fh span{margin-left:auto}
+.file{display:grid;grid-template-columns:16px 1fr auto;gap:9px;align-items:center;padding:6px 8px;border-radius:6px;text-align:left;width:100%}
+.file:hover{background:var(--hv)}
+.file.on{background:var(--sel)}
+.file b{font-weight:500;color:var(--tx);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file small{color:var(--fa);font-size:12px;font-variant-numeric:tabular-nums}
+.file.off b{color:var(--fa);text-decoration:line-through;text-decoration-color:var(--fa)}
+.ck{width:15px;height:15px;border-radius:4px;border:1px solid var(--ln2);display:grid;place-items:center;color:transparent;background:var(--panel)}
+.ck.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.mdv{overflow:auto;padding:14px 20px 20px;font:12px/1.65 ui-monospace,"SF Mono",Menlo,monospace;color:var(--tx2);white-space:pre-wrap;scrollbar-width:thin;scrollbar-color:var(--ln2) transparent}
+.mdv .fm{color:var(--fa)}
+.mdv .h{color:var(--tx);font-weight:600}
+.mdv .gt{color:var(--fa)}
+.mdv .q{color:var(--tx)}
+.mdv .tg{color:var(--uc)}
+.mdv .ph{color:var(--fa)}
+.df{display:flex;align-items:center;gap:10px;padding:12px 16px 12px 20px;border-top:1px solid var(--ln)}
+.tog{display:flex;align-items:center;gap:9px;text-align:left;margin-right:auto}
+.tog b{font-weight:500;color:var(--tx);font-size:12.5px;display:block}
+.tog small{color:var(--fa);font-size:11.5px}
+.sw{width:26px;height:16px;border-radius:8px;background:var(--ln2);position:relative;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw.on{background:var(--ac)}
+.sw.on::after{transform:translateX(10px)}
+.pbtn{padding:5px 12px;border-radius:6px;background:var(--ac);color:#fff;font-weight:500;font-size:12px}
+.pbtn:hover{background:var(--ac2)}
+.pbtn:disabled{opacity:.45;cursor:default}
+
+/* reading view (empty) */
+.main.solo{grid-template-rows:44px 1fr}
+
+/* menu + toast */
+.menu{position:absolute;z-index:20;min-width:190px;background:var(--pop);border:1px solid var(--ln2);border-radius:8px;box-shadow:var(--shadow);padding:4px;animation:pop .12s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(-4px) scale(.98)}}
+.menu .mh{padding:6px 8px 4px;font-size:11.5px;color:var(--fa)}
+.menu button{display:flex;align-items:center;gap:9px;width:100%;padding:6px 8px;border-radius:5px;text-align:left;color:var(--tx2)}
+.menu button:hover{background:var(--sel);color:var(--tx)}
+.menu button i{width:12px;height:2px;border-radius:1px;background:var(--uc)}
+.menu button kbd{margin-left:auto}
+.menu button.on{color:var(--tx)}
+.menu button.on::after{content:"✓";margin-left:6px;color:var(--mu);font-size:11px}
+.toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%) translateY(8px);background:var(--pop);color:var(--tx);border:1px solid var(--ln2);box-shadow:var(--shadow);padding:7px 12px;border-radius:8px;font-size:12px;z-index:30;opacity:0;transition:.18s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+
+<section class="intro" data-fit>
+  <div>
+    <h1><svg class="lg" viewBox="0 0 30 30"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg>Nightstand <span>Notes</span></h1>
+    <p>Every underline from every book, in one place in the library. Revisit brings back a different passage you underlined over a month ago each time you open Notes, and fills the app's empty states. The list below can be grouped by date, book or label, and filtered by label or by search.</p>
+  </div>
+  <dl>
+    <dt>Data</dt><dd>17 underlines in 4 books. Middlemarch and Pride and Prejudice quotes are checked against the Gutenberg texts; Dune and The Hobbit use their best-known lines</dd>
+    <dt>Try</dt><dd><span class="kb">J</span><span class="kb">K</span> move · <span class="kb">↵</span> open in reader · <span class="kb">1</span>–<span class="kb">4</span> relabel · <span class="kb">C</span> copy · <span class="kb">R</span> another revisit · <span class="kb">/</span> search · Export › Export to folder</dd>
+  </dl>
+</section>
+
+<section class="frame" data-fit data-init='{"theme":"dark"}'>
+  <header><span class="n">01</span><b>Recent</b><p>Dark. Revisit at the top (a new pick each time you open Notes, never the one you saw last), then the newest underlines grouped by day. Hover a row, or move to it with J/K, to see its actions.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"light","group":"book"}'>
+  <header><span class="n">02</span><b>By book</b><p>Light. Each book shows its status and a bar of its labels, so it's clear at a glance which books you argued with.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"dark","q":"pride","labels":[1,2]}'>
+  <header><span class="n">03</span><b>Search and filter</b><p>Search covers quotes, your notes and book titles. The label chips combine with it; here, "pride" filtered to Quote and Idea.</p></header>
+  <div class="win"></div>
+</section>
+
+<section class="frame" data-fit data-init='{"theme":"light","exportDlg":true}'>
+  <header><span class="n">04</span><b>Export to folder</b><p>Light. One Markdown file per book, with frontmatter and labels as tags, so the folder drops straight into an Obsidian vault. Filters don't apply here: the folder is a full copy.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"dark","view":"reading"}'>
+  <header><span class="n">05</span><b>Empty states</b><p>Dark. The library's Reading view with nothing in progress. Instead of a blank page, it offers the next step and a passage from your underlines. The Notes "No underlines match" state does the same.</p></header>
+  <div class="win"></div>
+</section>
+
+<section class="qs" data-fit>
+  <h2>Decided</h2>
+  <ol>
+    <li><b>Revisit frequency.</b> A new passage each time you open Notes, never the same one twice in a row. R or "Another" picks again.</li>
+    <li><b>Where Revisit lives.</b> On Notes, and on empty states: an empty library view (frame 05) and a search with no matches. Empty states use a smaller card.</li>
+    <li><b>Export.</b> Two options under Export. Copy as Markdown copies what's on screen, filters included. Export to folder writes one file per book; with "Keep up to date" on, Nightstand rewrites those files when you add or change an underline. It never touches files it didn't create.</li>
+  </ol>
+</section>
+
+<script>
+const LABEL = {1: "Quote", 2: "Idea", 3: "Question", 4: "Disagree"};
+const BOOKS = [{"t": "Middlemarch", "a": "George Eliot", "cover": "https://covers.openlibrary.org/b/id/9328284-L.jpg?default=false", "st": "reading", "prog": 39, "c1": "#2f4a3a"}, {"t": "Pride and Prejudice", "a": "Jane Austen", "cover": "https://covers.openlibrary.org/b/id/12645114-L.jpg?default=false", "st": "finished", "prog": 100, "c1": "#8c2f39"}, {"t": "Dune", "a": "Frank Herbert", "cover": "https://covers.openlibrary.org/b/id/15110282-L.jpg?default=false", "st": "finished", "prog": 100, "c1": "#5b1a18"}, {"t": "The Hobbit", "a": "J. R. R. Tolkien", "cover": "https://covers.openlibrary.org/b/id/12003329-L.jpg?default=false", "st": "finished", "prog": 100, "c1": "#264653"}];
+const NOTES = [{"b": 0, "ch": 1, "p": 2, "c": 1, "q": "Miss Brooke had that kind of beauty which seems to be thrown into relief by poor dress.", "note": "", "d": "2026-09-03"}, {"b": 0, "ch": 20, "p": 184, "c": 1, "q": "If we had a keen vision and feeling of all ordinary human life, it would be like hearing the grass grow and the squirrel’s heart beat, and we should die of that roar which lies on the other side of silence.", "note": "The line everyone quotes, and it earns it.", "d": "2026-09-28"}, {"b": 0, "ch": 21, "p": 196, "c": 4, "q": "We are all of us born in moral stupidity, taking the world as an udder to feed our supreme selves", "note": "Too bleak. Small children share before anyone teaches them to.", "d": "2026-09-29"}, {"b": 0, "ch": 27, "p": 254, "c": 2, "q": "Your pier-glass or extensive surface of polished steel made to be rubbed by a housemaid, will be minutely and multitudinously scratched in all directions", "note": "The candle parable: everyone thinks the scratches arrange themselves around them.", "d": "2026-10-06"}, {"b": 0, "ch": 35, "p": 315, "c": 1, "q": "The wit of a family is usually best received among strangers.", "note": "", "d": "2026-10-22"}, {"b": 0, "ch": 35, "p": 317, "c": 2, "q": "We are all humiliated by the sudden discovery of a fact which has existed very comfortably and perhaps been staring at us in private while we have been making up our world entirely without it.", "note": "Eliot describing confirmation bias a century before it had a name.", "d": "2026-10-22"}, {"b": 0, "ch": 35, "p": 320, "c": 3, "q": "One likes to be done well by in every tense, past, present, and future.", "note": "Is Eliot mocking the relatives here, or admitting she feels it too?", "d": "2026-10-23"}, {"b": 0, "ch": 35, "p": 322, "c": 2, "q": "It always seemed to him that words were the hardest part of “business.”", "note": "Caleb is the only honest man in this room.", "d": "2026-10-23"}, {"b": 1, "ch": 1, "p": 1, "c": 1, "q": "It is a truth universally acknowledged, that a single man in possession of a good fortune must be in want of a wife.", "note": "", "d": "2026-03-02"}, {"b": 1, "ch": 5, "p": 18, "c": 1, "q": "I could easily forgive his pride, if he had not mortified mine.", "note": "Elizabeth admits the real problem in one line.", "d": "2026-03-04"}, {"b": 1, "ch": 5, "p": 18, "c": 2, "q": "Vanity and pride are different things, though the words are often used synonymously.", "note": "Pride is what you think of yourself; vanity is what you want others to think of you. A useful split.", "d": "2026-03-04"}, {"b": 1, "ch": 31, "p": 188, "c": 1, "q": "There is a stubbornness about me that never can bear to be frightened at the will of others.", "note": "", "d": "2026-03-12"}, {"b": 1, "ch": 34, "p": 204, "c": 4, "q": "In vain have I struggled. It will not do. My feelings will not be repressed.", "note": "Opening with how much he fought it is the insult. No wonder she says no.", "d": "2026-03-13"}, {"b": 1, "ch": 36, "p": 227, "c": 2, "q": "Till this moment, I never knew myself.", "note": "The turn of the whole book.", "d": "2026-03-14"}, {"b": 1, "ch": 57, "p": 396, "c": 3, "q": "For what do we live, but to make sport for our neighbours, and laugh at them in our turn?", "note": "Is Mr Bennet wise, or has he just checked out?", "d": "2026-03-24"}, {"b": 2, "ch": null, "p": 9, "c": 1, "q": "I must not fear. Fear is the mind-killer. Fear is the little-death that brings total obliteration.", "note": "Read this before every exam.", "d": "2026-01-10"}, {"b": 3, "ch": 1, "p": 1, "c": 1, "q": "In a hole in the ground there lived a hobbit.", "note": "", "d": "2025-12-28"}];
+const TODAY = new Date("2026-10-23T12:00:00");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const day = iso => new Date(iso + "T12:00:00");
+const ago = iso => Math.round((TODAY - day(iso)) / 864e5);
+const short = iso => { const d = day(iso), n = ago(iso); return n === 0 ? "Today" : n === 1 ? "Yesterday" : `${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear() !== TODAY.getFullYear() ? " " + d.getFullYear() : ""}`; };
+function bucket(iso) {
+  const n = ago(iso), d = day(iso);
+  if (n === 0) return "Today";
+  if (n === 1) return "Yesterday";
+  if (n < 7) return "Earlier this week";
+  if (d.getMonth() === TODAY.getMonth() && d.getFullYear() === TODAY.getFullYear()) return "Earlier in October";
+  return FULL[d.getMonth()] + (d.getFullYear() !== TODAY.getFullYear() ? " " + d.getFullYear() : "");
+}
+
+let iconUid = 0;
+const BOOKMARK = "M4.5 2.25h7v11.5L8 11.1l-3.5 2.65z";
+function statusIcon(st, prog = 0) {
+  const svg = inner => `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  if (st === "finished") return svg(`<path d="${BOOKMARK}" fill="var(--done)" stroke="var(--done)" stroke-width="1.4"/><path d="m6.1 6.4 1.4 1.4 2.5-2.7" stroke="#fff" stroke-width="1.4"/>`);
+  if (st === "reading") {
+    const fill = prog < 37.5 ? .25 : prog <= 62.5 ? .5 : .75;
+    const id = "bm" + (++iconUid), h = (8.85 * fill + .25).toFixed(2);
+    return svg(`<defs><clipPath id="${id}"><rect x="0" y="2" width="16" height="${h}"/></clipPath></defs><path d="${BOOKMARK}" fill="var(--prog)" clip-path="url(#${id})"/><path d="${BOOKMARK}" stroke="var(--prog)" stroke-width="1.4"/>`);
+  }
+  return svg(`<path d="${BOOKMARK}" stroke="var(--mu)" stroke-width="1.4"/>`);
+}
+const I = {
+  book: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M3 2.5h7.5a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2z"/><path d="M3 11.5a2 2 0 0 1 2-2h7.5"/></svg>',
+  search: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>',
+  open: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3.5h4a2 2 0 0 1 2 2v8a1.5 1.5 0 0 0-1.5-1.5H2zM14 3.5h-4a2 2 0 0 0-2 2v8a1.5 1.5 0 0 1 1.5-1.5H14z"/></svg>',
+  copy: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 3.5v-.5A1.5 1.5 0 0 0 9 1.5H4A1.5 1.5 0 0 0 2.5 3v5A1.5 1.5 0 0 0 4 9.5h.5"/></svg>',
+  more: '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.2"/><circle cx="8" cy="8" r="1.2"/><circle cx="12.5" cy="8" r="1.2"/></svg>',
+  shuffle: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h2.5c3 0 4 7 7 7H14M2 11.5h2.5c1.3 0 2.2-1.3 2.9-2.8M9.6 7.3c.7-1.5 1.6-2.8 2.9-2.8H14M12 2.5l2 2-2 2M12 9.5l2 2-2 2"/></svg>',
+  folder: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M2 4.5a1 1 0 0 1 1-1h3.2l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/></svg>',
+  md: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M4 1.75h5.5L12.5 4.75v9.5H4z"/><path d="M9.5 1.75v3h3"/></svg>',
+  check: '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m2 5.2 2 2 4-4.4"/></svg>',
+  x: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="m4 4 8 8M12 4l-8 8"/></svg>',
+  export: '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10V2.5M5 5.5l3-3 3 3M3 9.5v3a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-3"/></svg>',
+};
+const LOGO = '<svg class="lg" viewBox="0 0 30 30"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg>';
+const cover = (b, cls = "") => b.cover ? `<img class="${cls}" src="${b.cover}" alt="">` : `<span class="ph ${cls}" style="background:${b.c1}"></span>`;
+
+function mountNotes(win, init, scaleOf) {
+  const S = Object.assign({theme: "dark", group: "recent", q: "", labels: [], notesOnly: false, rv: 0, view: "notes", exportDlg: false}, init);
+  const EX = {folder: "~/Documents/Obsidian/Books", sync: true, synced: null, off: new Set(), sel: 0};
+  S.labels = new Set(S.labels);
+  const N = NOTES.map((n, i) => ({...n, id: i + 1}));
+  let focusId = null, menu = null;
+  const root = document.createElement("div");
+  root.className = "app"; root.tabIndex = -1;
+  win.appendChild(root);
+  root.innerHTML = `
+  <aside class="sb">
+    <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="ws">${LOGO}<b>Nightstand</b></div>
+    <button class="nv">${I.book}All books<span class="ct">16</span></button>
+    <button class="nv${S.view === "reading" ? " on" : ""}">${statusIcon("reading", 50)}Reading<span class="ct">${S.view === "reading" ? 0 : 3}</span></button>
+    <button class="nv">${statusIcon("want")}Not started<span class="ct">7</span></button>
+    <button class="nv">${statusIcon("finished")}Finished<span class="ct">${S.view === "reading" ? 9 : 6}</span></button>
+    <div class="sec">Notes</div>
+    <button class="nv${S.view === "reading" ? "" : " on"}" data-l="0"><span class="ul"><i></i></span>All underlines<span class="ct"></span></button>
+    ${[1, 2, 3, 4].map(c => `<button class="nv c${c}" data-l="${c}"><span class="sub"><i></i></span>${LABEL[c]}<span class="ct"></span></button>`).join("")}
+    <div class="sb-foot"><div class="theme" role="group" aria-label="Theme"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div>
+  </aside>
+  <section class="main">
+    <header class="hd">
+      <span class="crumb">Notes<small></small></span>
+      <div class="tabs" role="tablist"><button data-g="recent">Recent</button><button data-g="book">By book</button><button data-g="label">By label</button></div>
+      <div class="rt"><button class="hbtn" data-a="export">${I.export}Export</button></div>
+    </header>
+    <div class="fbar">
+      <span class="si">${I.search}</span><input class="q" placeholder="Search quotes, notes and books…" aria-label="Search underlines">
+      ${[1, 2, 3, 4].map(c => `<button class="lchip c${c}" data-c="${c}"><i></i>${LABEL[c]}<small></small></button>`).join("")}
+      <span class="dv"></span><button class="lchip nn" data-a="notesonly">With notes</button>
+    </div>
+    <div class="list" tabindex="0" data-scroll aria-label="Underlines"><div class="col"></div></div>
+    <div class="toast" role="status"></div>
+  </section>`;
+  const $ = s => root.querySelector(s), $$ = s => [...root.querySelectorAll(s)];
+  const col = $(".col"), list = $(".list"), q = $(".q");
+  q.value = S.q;
+  const book = n => BOOKS[n.b];
+  const quoteOf = n => `“${n.q}” (${book(n).a}, ${book(n).t}, ${n.ch ? "Chapter " + n.ch : ""})`;
+
+  function hl(text) {
+    const t = esc(text);
+    if (!S.q.trim()) return t;
+    const k = S.q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return t.replace(new RegExp(`(${k})`, "gi"), '<mark class="hl">$1</mark>');
+  }
+  const matches = n => {
+    if (S.labels.size && !S.labels.has(n.c)) return false;
+    if (S.notesOnly && !n.note) return false;
+    const k = S.q.trim().toLowerCase();
+    return !k || [n.q, n.note, book(n).t, book(n).a].some(x => (x || "").toLowerCase().includes(k));
+  };
+  const revisitPool = () => N.filter(n => ago(n.d) >= 30);
+  // A new pick each time Notes opens, never the passage shown last time. R cycles from there.
+  const store = {get: () => { try { return +localStorage.getItem("underline-rv"); } catch (e) { return 0; } }, set: id => { try { localStorage.setItem("underline-rv", id); } catch (e) {} }};
+  {
+    const pool = revisitPool(), last = store.get();
+    do S.rv = Math.floor(Math.random() * pool.length); while (pool.length > 1 && pool[S.rv].id === last);
+  }
+  function revisitHTML(small) {
+    const pool = revisitPool(), n = pool[S.rv % pool.length], b = book(n), m = Math.round(ago(n.d) / 30);
+    store.set(n.id);
+    return `<section class="rv c${n.c}${small ? " sm" : ""}" aria-label="Revisit">
+        <div class="k"><b>Revisit</b><span>·</span>${small ? "From your underlines, " : "You underlined this "}${m > 1 ? m + " months" : ago(n.d) + " days"} ago</div>
+        <blockquote><span>${esc(n.q)}</span></blockquote>
+        ${n.note ? `<div class="nt">${esc(n.note)}</div>` : ""}
+        <div class="ft"><span class="src">${cover(b)}<span><b>${esc(b.t)}</b> · ${esc(b.a)}${n.ch && !small ? ` · Chapter ${n.ch}` : ""}</span></span>
+          <button class="hbtn" data-a="another">${I.shuffle}Another${small ? "" : '<kbd style="margin:0 0 0 4px">R</kbd>'}</button><button class="hbtn" data-a="rv-open" data-id="${n.id}">${I.open}Open at p. ${n.p}</button></div>
+      </section>`;
+  }
+
+  function itemHTML(n, showBook) {
+    const b = book(n);
+    return `<article class="it c${n.c}${n.id === focusId ? " focus" : ""}" data-id="${n.id}">
+      <q><span>${hl(n.q)}</span></q>
+      ${n.note ? `<div class="nt">${hl(n.note)}</div>` : ""}
+      <div class="mt">${showBook ? `${cover(b)}<b>${hl(b.t)}</b><span class="dot">·</span>` : ""}${n.ch ? `Chapter ${n.ch}<span class="dot">·</span>` : ""}p. ${n.p}<span class="dot">·</span><button class="lab" data-a="label" title="Change label (1–4)"><i></i>${LABEL[n.c]}</button><span class="dot">·</span>${short(n.d)}</div>
+      <div class="acts"><button class="ib" data-a="open" title="Open in reader (↵)">${I.open}</button><button class="ib" data-a="copy" title="Copy with citation (C)">${I.copy}</button><button class="ib" data-a="label" title="Change label">${I.more}</button></div>
+    </article>`;
+  }
+  const bar = items => `<span class="bar">${[1, 2, 3, 4].map(c => { const k = items.filter(n => n.c === c).length; return k ? `<i class="c${c}" style="flex:${k}" title="${k} ${LABEL[c]}"></i>` : ""; }).join("")}</span>`;
+
+  function renderReading() {
+    root.dataset.theme = S.theme;
+    $$(".theme button").forEach(b => b.classList.toggle("on", b.dataset.theme === S.theme));
+    $(".main").classList.add("solo");
+    $$(".sb .nv[data-l]").forEach(b => { const c = +b.dataset.l; b.querySelector(".ct").textContent = c ? N.filter(n => n.c === c).length : N.length; });
+    $(".hd").innerHTML = `<span class="crumb">Reading<small>0 books</small></span>`;
+    $(".fbar")?.remove();
+    col.innerHTML = `<div class="empty" style="padding-top:96px"><span class="ei">${statusIcon("reading", 50).replace('width="14" height="14"', 'width="16" height="16"')}</span><b>Nothing in progress</b>Start one from Not started, or read a finished book again.
+      <div class="acts2" style="margin-top:14px"><button class="hbtn" data-a="nyi" data-m="Shows the 7 Not started books">${statusIcon("want")}Not started<small style="color:var(--fa);font-weight:400">7</small></button></div></div>` + revisitHTML(true);
+  }
+  function render() {
+    if (S.view === "reading") return renderReading();
+    root.dataset.theme = S.theme;
+    $$(".theme button").forEach(b => b.classList.toggle("on", b.dataset.theme === S.theme));
+    $$(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.g === S.group));
+    $$(".lchip[data-c]").forEach(b => { const c = +b.dataset.c; b.classList.toggle("on", S.labels.has(c)); b.setAttribute("aria-pressed", S.labels.has(c)); b.querySelector("small").textContent = N.filter(n => n.c === c).length; });
+    $('[data-a="notesonly"]').classList.toggle("on", S.notesOnly);
+    $$(".sb .nv[data-l]").forEach(b => { const c = +b.dataset.l; b.querySelector(".ct").textContent = c ? N.filter(n => n.c === c).length : N.length; b.classList.toggle("on", c ? S.labels.size === 1 && S.labels.has(c) : !S.labels.size); });
+    const vis = N.filter(matches).sort((a, b) => b.d.localeCompare(a.d) || b.id - a.id);
+    const filtered = S.q.trim() || S.labels.size || S.notesOnly;
+    $(".crumb small").textContent = filtered ? `${vis.length} of ${N.length}` : `${N.length} underlines · ${new Set(N.map(n => n.b)).size} books`;
+    let html = "";
+    if (S.group === "recent" && !filtered) {
+      html += revisitHTML(false);
+    }
+    if (!vis.length) html += `<div class="empty"><span class="ei">${I.search}</span><b>No underlines match</b>Try a different word, or clear the filters.<div class="acts2"><button class="hbtn" data-a="clear">Clear filters</button></div></div>` + revisitHTML(true);
+    else if (S.group === "recent") {
+      const g = {};
+      vis.forEach(n => (g[bucket(n.d)] = g[bucket(n.d)] || []).push(n));
+      html += Object.entries(g).map(([k, items]) => `<div class="gh">${k}<span class="cn">${items.length}</span></div>` + items.map(n => itemHTML(n, true)).join("")).join("");
+    } else if (S.group === "book") {
+      const g = {};
+      vis.forEach(n => (g[n.b] = g[n.b] || []).push(n));
+      html += Object.entries(g).sort((a, b) => b[1][0].d.localeCompare(a[1][0].d)).map(([bi, items]) => {
+        const b = BOOKS[bi];
+        return `<div class="bh">${cover(b)}<div><b>${hl(b.t)}</b><div class="au">${esc(b.a)}<span>${statusIcon(b.st, b.prog)}${b.st === "reading" ? `Reading · ${b.prog}%` : "Finished"}</span></div></div>
+          <div class="rt">${items.length} underline${items.length > 1 ? "s" : ""}${bar(items)}</div></div>` +
+          items.sort((x, y) => x.p - y.p).map(n => itemHTML(n, false)).join("");
+      }).join("");
+    } else {
+      html += [1, 2, 3, 4].map(c => { const items = vis.filter(n => n.c === c); return items.length ? `<div class="gh c${c}"><span class="lab"><i></i>${LABEL[c]}</span><span class="cn">${items.length}</span></div>` + items.map(n => itemHTML(n, true)).join("") : ""; }).join("");
+    }
+    col.innerHTML = html;
+  }
+
+  /* ---- interactions ---- */
+  let tt;
+  function toast(m) { const t = $(".toast"); t.textContent = m; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1700); }
+  const byId = id => N.find(n => n.id === id);
+  function open(n) { toast(`Opens ${book(n).t} at p. ${n.p}, with the underline highlighted`); }
+  function copy(n) { navigator.clipboard?.writeText(quoteOf(n)).catch(() => {}); toast("Copied with citation"); }
+  function relabel(n, c) {
+    n.c = c; closeMenu(); render();
+    const el = col.querySelector(`.it[data-id="${n.id}"]`);
+    if (el) { el.classList.add("flash"); }
+    toast(`Labelled ${LABEL[c]}`);
+  }
+  function closeMenu() { menu?.remove(); menu = null; }
+  function exportMenu(anchor) {
+    if (menu) return closeMenu();
+    const s = scaleOf(), mr = $(".main").getBoundingClientRect(), ar = anchor.getBoundingClientRect(), shown = N.filter(matches).length;
+    menu = document.createElement("div"); menu.className = "menu ex";
+    menu.innerHTML = `<button data-a="ex-copy">${I.copy}<span>Copy as Markdown<small>The ${shown} underline${shown === 1 ? "" : "s"} shown, grouped by book</small></span></button>
+      <button data-a="ex-folder">${I.folder}<span>Export to folder…<small${EX.synced ? ' class="sync"' : ""}>${EX.synced ? `Keeping ${EX.folder.split("/").pop()} up to date · written ${EX.synced}` : "One Markdown file per book, for Obsidian"}</small></span></button>`;
+    $(".main").appendChild(menu);
+    menu.style.left = ((ar.right - mr.left) / s - 300) + "px";
+    menu.style.top = ((ar.bottom - mr.top) / s + 4) + "px";
+  }
+
+  /* ---- export to folder ---- */
+  const byBook = () => Object.entries(N.reduce((g, n) => ((g[n.b] = g[n.b] || []).push(n), g), {})).map(([bi, items]) => ({bi: +bi, b: BOOKS[bi], items: items.sort((x, y) => x.p - y.p)}));
+  const fileName = b => b.t.replace(/[\\/:*?"<>|]/g, "") + ".md";
+  function mdFor({b, items}) {
+    const iso = d => d, out = ["---", `title: "${b.t}"`, `author: "${b.a}"`, `status: ${b.st === "reading" ? "reading" : "finished"}`];
+    if (b.st === "reading") out.push(`progress: ${b.prog}%`);
+    out.push(`underlines: ${items.length}`, "tags: [book]", `updated: ${TODAY.toISOString().slice(0, 10)}`, "---", "", `# ${b.t}`, `${b.a}`);
+    let ch;
+    items.forEach(n => {
+      if (n.ch !== ch) { ch = n.ch; if (ch) out.push("", `## Chapter ${ch}`); }
+      out.push("", `> ${n.q}`, "");
+      if (n.note) out.push(n.note, "");
+      out.push(`#${LABEL[n.c].toLowerCase()} · p. ${n.p} · ${iso(n.d)}`);
+    });
+    return out.join("\n") + "\n";
+  }
+  function mdHTML(text) {
+    let fm = 0;
+    return text.split("\n").map(l => {
+      if (l === "---") { fm++; return `<span class="fm">${l}</span>`; }
+      if (fm === 1) return `<span class="fm">${esc(l)}</span>`;
+      if (/^#{1,2} /.test(l)) return `<span class="h">${esc(l)}</span>`;
+      if (l.startsWith("> ")) return `<span class="gt">&gt;</span> <span class="q">${esc(l.slice(2))}</span>`;
+      const m = l.match(/^#(quote|idea|question|disagree)( · .*)$/);
+      if (m) { const c = Object.keys(LABEL).find(k => LABEL[k].toLowerCase() === m[1]); return `<span class="ph"><span class="tg c${c}">#${m[1]}</span>${esc(m[2])}</span>`; }
+      return esc(l);
+    }).join("\n");
+  }
+  let dlg = null;
+  function openExport() {
+    closeMenu(); dlg?.remove();
+    dlg = document.createElement("div"); dlg.className = "scrim";
+    $(".main").appendChild(dlg);
+    drawExport();
+    dlg.addEventListener("click", e => {
+      if (e.target === dlg) return closeExport();
+      const t = e.target.closest("[data-x]"); if (!t) return;
+      const x = t.dataset.x;
+      if (x === "close") closeExport();
+      else if (x === "pick") { const i = +t.dataset.i; if (e.target.closest(".ck")) EX.off.has(i) ? EX.off.delete(i) : EX.off.add(i); else EX.sel = i; drawExport(); }
+      else if (x === "sync") { EX.sync = !EX.sync; drawExport(); }
+      else if (x === "choose") toast("Opens the macOS folder picker");
+      else if (x === "go") {
+        const k = byBook().filter(f => !EX.off.has(f.bi)).length;
+        EX.synced = EX.sync ? "just now" : null; closeExport();
+        toast(`${k} file${k === 1 ? "" : "s"} written to ${EX.folder}${EX.sync ? ", kept up to date" : ""}`);
+      }
+    });
+  }
+  function closeExport() { dlg?.remove(); dlg = null; root.focus({preventScroll: true}); }
+  function drawExport() {
+    const files = byBook(), cur = files.find(f => f.bi === EX.sel) || files[0], k = files.filter(f => !EX.off.has(f.bi)).length;
+    const top = dlg.querySelector(".mdv")?.scrollTop;
+    dlg.innerHTML = `<div class="dlg" role="dialog" aria-label="Export to folder">
+      <div class="dh"><div><h3>Export to folder</h3><p>One Markdown file per book with every underline and note. Labels become tags.</p></div><button class="ib" data-x="close" title="Close (Esc)">${I.x}</button></div>
+      <div class="fold">${I.folder}<code>${esc(EX.folder)}</code><button class="hbtn" data-x="choose">Choose…</button></div>
+      <div class="dbd">
+        <div class="files"><div class="fh">${files.length} files<span>Underlines</span></div>
+          ${files.map(f => `<button class="file${f.bi === cur.bi ? " on" : ""}${EX.off.has(f.bi) ? " off" : ""}" data-x="pick" data-i="${f.bi}"><span class="ck${EX.off.has(f.bi) ? "" : " on"}">${I.check}</span><b>${esc(fileName(f.b))}</b><small>${f.items.length}</small></button>`).join("")}
+        </div>
+        <div class="mdv">${mdHTML(mdFor(cur))}</div>
+      </div>
+      <div class="df"><button class="tog" data-x="sync"><span class="sw${EX.sync ? " on" : ""}"></span><span><b>Keep up to date</b><small>Rewrites these files when you add or change an underline. Never touches other files.</small></span></button>
+        <button class="hbtn" data-x="close">Cancel</button><button class="pbtn" data-x="go"${k ? "" : " disabled"}>Export ${k} file${k === 1 ? "" : "s"}</button></div>
+    </div>`;
+    if (top) dlg.querySelector(".mdv").scrollTop = top;
+  }
+  function labelMenu(anchor, n) {
+    closeMenu();
+    const s = scaleOf(), mr = $(".main").getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+    menu = document.createElement("div"); menu.className = "menu";
+    menu.innerHTML = `<div class="mh">Label</div>` + [1, 2, 3, 4].map(c => `<button class="c${c}${n.c === c ? " on" : ""}" data-c="${c}"><i></i>${LABEL[c]}<kbd>${c}</kbd></button>`).join("");
+    $(".main").appendChild(menu);
+    menu.style.left = Math.min((ar.left - mr.left) / s, $(".main").offsetWidth - 200) + "px";
+    menu.style.top = ((ar.bottom - mr.top) / s + 4) + "px";
+    menu.addEventListener("click", e => { const b = e.target.closest("[data-c]"); if (b) relabel(n, +b.dataset.c); });
+  }
+  root.addEventListener("click", e => {
+    const t = e.target.closest("[data-a],[data-g],[data-c],[data-theme],.nv[data-l],.it");
+    if (!e.target.closest(".menu") && !e.target.closest('[data-a="label"]')) closeMenu();
+    if (!t) return;
+    const it = e.target.closest(".it"), n = it && byId(+it.dataset.id);
+    if (t.dataset.g) { S.group = t.dataset.g; render(); return; }
+    if (t.dataset.theme) { S.theme = t.dataset.theme; render(); return; }
+    if (t.matches(".lchip[data-c]")) { const c = +t.dataset.c; S.labels.has(c) ? S.labels.delete(c) : S.labels.add(c); render(); return; }
+    if (t.matches(".nv[data-l]")) { const c = +t.dataset.l; S.labels = new Set(c ? [c] : []); render(); return; }
+    const a = t.dataset.a;
+    if (a === "notesonly") { S.notesOnly = !S.notesOnly; render(); }
+    else if (a === "another") another();
+    else if (a === "rv-open") open(byId(+t.dataset.id));
+    else if (a === "clear") { S.q = ""; q.value = ""; S.labels.clear(); S.notesOnly = false; render(); }
+    else if (a === "export") exportMenu(t);
+    else if (a === "ex-copy") { closeMenu(); exportMd(); }
+    else if (a === "ex-folder") { closeMenu(); openExport(); }
+    else if (a === "nyi") toast(t.dataset.m);
+    else if (a === "open") open(n);
+    else if (a === "copy") copy(n);
+    else if (a === "label") labelMenu(t, n);
+    else if (t.matches(".it")) { focusId = n.id; $$(".it.focus").forEach(x => x.classList.remove("focus")); t.classList.add("focus"); }
+  });
+  root.addEventListener("dblclick", e => { const it = e.target.closest(".it"); if (it) open(byId(+it.dataset.id)); });
+  q.addEventListener("input", () => { S.q = q.value; render(); });
+  function another() {
+    S.rv++; render();
+    const rv = $(".rv"); if (rv) { rv.classList.add("swap"); }
+  }
+  function exportMd() {
+    const vis = N.filter(matches), out = [];
+    Object.values(vis.reduce((g, n) => ((g[n.b] = g[n.b] || []).push(n), g), {})).forEach(items => {
+      const b = book(items[0]);
+      out.push(`# ${b.t}`, `${b.a}`, "");
+      items.sort((x, y) => x.p - y.p).forEach(n => out.push(`> ${n.q}`, "", ...(n.note ? [n.note, ""] : []), `${LABEL[n.c]} · ${n.ch ? "Chapter " + n.ch + " · " : ""}p. ${n.p}`, ""));
+    });
+    navigator.clipboard?.writeText(out.join("\n")).catch(() => {});
+    toast(`${vis.length} underlines copied as Markdown, grouped by book`);
+  }
+  function move(d) {
+    const ids = $$(".it").map(x => +x.dataset.id);
+    if (!ids.length) return;
+    const i = ids.indexOf(focusId);
+    focusId = ids[Math.max(0, Math.min(ids.length - 1, i < 0 ? 0 : i + d))];
+    $$(".it").forEach(x => x.classList.toggle("focus", +x.dataset.id === focusId));
+    const el = col.querySelector(`.it[data-id="${focusId}"]`);
+    const lr = list.getBoundingClientRect(), er = el.getBoundingClientRect(), s = scaleOf();
+    if (er.top < lr.top + 60 * s || er.bottom > lr.bottom) list.scrollTop += (er.top - lr.top) / s - 120;
+  }
+  root.addEventListener("mousedown", e => { if (!e.target.closest("input")) root.focus({preventScroll: true}); });
+  root.addEventListener("keydown", e => {
+    if (dlg) { if (e.key === "Escape") { closeExport(); e.preventDefault(); } return; }
+    if (e.target === q) { if (e.key === "Escape") { q.value = S.q = ""; render(); root.focus(); } if (e.key === "Enter" || e.key === "ArrowDown") { root.focus(); move(1); } return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key.toLowerCase(), n = focusId && byId(focusId);
+    if (k === "j" || k === "arrowdown") move(1);
+    else if (k === "k" || k === "arrowup") move(-1);
+    else if (k === "/") q.focus();
+    else if (k === "r") another();
+    else if (k === "escape") { closeMenu(); focusId = null; render(); }
+    else if (n && k === "enter") open(n);
+    else if (n && k === "c") copy(n);
+    else if (n && ["1", "2", "3", "4"].includes(k)) relabel(n, +k);
+    else if (n && k === "l") labelMenu(col.querySelector(`.it[data-id="${n.id}"] .lab`), n);
+    else return;
+    e.preventDefault();
+  });
+  render();
+  if (S.exportDlg) { EX.sel = 0; openExport(); }
+}
+
+let scale = 1;
+function fit() {
+  scale = Math.min(1, (innerWidth - 48) / 1280);
+  document.querySelectorAll("[data-fit]").forEach(el => {
+    el.style.transform = scale < 1 ? `scale(${scale})` : "";
+    el.style.marginLeft = scale < 1 ? "24px" : "";
+    el.style.marginBottom = scale < 1 ? `${-(el.offsetHeight * (1 - scale)) + 40}px` : "";
+  });
+}
+fit(); addEventListener("resize", fit);
+document.querySelectorAll(".frame").forEach(f => mountNotes(f.querySelector(".win"), JSON.parse(f.dataset.init), () => scale));
+</script>
+</body>
+</html>

@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calibre library window: three directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============ CANVAS SHELL ============ */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:#e4e3df;font:14px/1.4 "Geist",sans-serif;color:#222}
+#viewport{position:fixed;inset:0;cursor:grab;overflow:hidden;
+  background-image:radial-gradient(#c4c2bc 1px,transparent 1px);background-size:24px 24px}
+#viewport.dragging{cursor:grabbing}
+#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.board{position:absolute;width:1440px}
+.board-label{height:150px;display:flex;flex-direction:column;justify-content:flex-end;padding-bottom:22px;cursor:zoom-in}
+.board-label .num{font:500 22px "Geist Mono",monospace;color:#77756f}
+.board-label h2{font:700 54px/1 "Geist",sans-serif;letter-spacing:-.02em;margin:6px 0 10px}
+.board-label p{font-size:22px;color:#4a4843;max-width:1200px}
+.board-label .axes{display:flex;flex-wrap:wrap;gap:8px 28px;margin-top:12px;font:400 16px "Geist Mono",monospace;color:#6a6862}
+.board-label .axes span{white-space:nowrap}
+.board-label .axes b{color:#222;font-weight:500}
+.screen{width:1440px;height:900px;border-radius:14px;overflow:hidden;position:relative;cursor:default;
+  box-shadow:0 1px 0 rgba(0,0,0,.06),0 24px 60px -20px rgba(0,0,0,.35)}
+.intro{width:1440px;height:1050px;padding:150px 80px 0 0}
+.intro h1{font:700 110px/0.95 "Geist",sans-serif;letter-spacing:-.04em}
+.intro .lede{font-size:28px;line-height:1.4;color:#3d3b37;max-width:1150px;margin:36px 0 44px}
+.intro table{border-collapse:collapse;font-size:20px;width:100%}
+.intro th{text-align:left;font:500 15px "Geist Mono",monospace;color:#77756f;text-transform:uppercase;letter-spacing:.06em;padding:0 16px 12px 0;border-bottom:2px solid #222}
+.intro td{padding:16px 16px 16px 0;border-bottom:1px solid #c9c7c0;vertical-align:top}
+.intro td:first-child{font:500 18px "Geist Mono",monospace;color:#77756f;width:60px}
+.intro .src{margin-top:36px;font-size:19px;line-height:1.5;color:#4a4843;max-width:1200px}
+.intro .src b{color:#222}
+.intro .keys{margin-top:22px;font:400 18px "Geist Mono",monospace;color:#5d5b55}
+.intro kbd{border:1px solid #9b9890;border-bottom-width:2px;border-radius:5px;padding:1px 7px;background:#f4f3ef;color:#222}
+#hud{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:4px;align-items:center;
+  background:#1d1d1b;color:#eee;padding:6px;border-radius:10px;z-index:10;font:500 13px "Geist",sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.25);white-space:nowrap}
+#hud button{all:unset;cursor:pointer;padding:7px 11px;border-radius:6px;color:#d8d6d0}
+#hud button:hover{background:#34332f;color:#fff}
+#hud button:focus-visible{outline:2px solid #8ab4ff}
+#hud .sep{width:1px;height:20px;background:#3c3b37;margin:0 4px}
+#hud #zoomPct{font-family:"Geist Mono",monospace;min-width:52px;text-align:center;color:#a9a7a0}
+#hud #src{font:400 12px "Geist Mono",monospace;color:#a9a7a0;padding:0 8px}
+#hud #src i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#c9a227;margin-right:7px;vertical-align:1px}
+#hud #src.live i{background:#3fb950}
+
+/* shared cover primitive: real cover image over a typographic fallback */
+.cv{position:relative;background:var(--c1);color:var(--c2);overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
+.cv .cv-t,.cv .cv-a{display:block;overflow-wrap:anywhere}
+.cv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+
+/* ============ OPTION 1 — READING ROOM ============ */
+.o1{background:#f3ede2;color:#1f1b16;font:15px/1.5 "Public Sans",sans-serif;height:100%;display:grid;grid-template-rows:76px 1fr 38px}
+.o1 button,.o1 select{font:inherit;cursor:pointer}
+.o1 :focus-visible{outline:2px solid #8a2c1d;outline-offset:2px}
+.o1 .mast{display:flex;align-items:center;gap:40px;padding:0 44px;border-bottom:1px solid #d9cfbd}
+.o1 .wm{font:800 30px "Fraunces",serif;letter-spacing:-.02em}
+.o1 .wm span{font-weight:400;font-style:italic;color:#8a2c1d}
+.o1 nav{display:flex;gap:26px;font-size:15px}
+.o1 nav a{color:#6b6156;text-decoration:none;padding:6px 0;border-bottom:2px solid transparent}
+.o1 nav a.on{color:#1f1b16;border-color:#1f1b16}
+.o1 .find{margin-left:auto;display:flex;align-items:center;gap:10px;border-bottom:1px solid #1f1b16;padding:6px 2px;width:300px}
+.o1 .find input{border:0;background:none;font:italic 16px "Fraunces",serif;width:100%;color:#1f1b16;outline:none}
+.o1 .btn-ink{background:#1f1b16;color:#f3ede2;border:0;border-radius:3px;padding:10px 18px;font-weight:600;white-space:nowrap}
+.o1 .btn-ink:hover{background:#8a2c1d}
+.o1 .cols{display:grid;grid-template-columns:210px 1fr 380px;min-height:0}
+.o1 .index{padding:30px 24px 30px 44px;border-right:1px solid #d9cfbd;overflow:auto}
+.o1 .index h4{font:600 11px "Public Sans";letter-spacing:.14em;text-transform:uppercase;color:#8b7f70;margin:22px 0 8px}
+.o1 .index h4:first-child{margin-top:0}
+.o1 .index button{display:flex;justify-content:space-between;gap:8px;width:100%;background:none;border:0;padding:4px 0;text-align:left;color:#3a332b;font-size:14px}
+.o1 .index button:hover,.o1 .index button.on{color:#8a2c1d}
+.o1 .index button.on{font-weight:600}
+.o1 .index button i{font-style:normal;color:#a3978a;font-variant-numeric:tabular-nums}
+.o1 .spread{padding:44px 44px;display:grid;grid-template-columns:240px minmax(0,1fr);gap:40px;overflow:hidden;align-content:start}
+.o1 .spread .cv{width:240px;height:360px;padding:28px 24px;box-shadow:12px 14px 0 -2px #d9cfbd;border-radius:2px 4px 4px 2px}
+.o1 .cv .cv-t{font:800 34px/1.02 "Fraunces",serif;letter-spacing:-.01em}
+.o1 .cv .cv-a{font:500 13px "Public Sans";letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+.o1 .meta-top{font-size:13px;color:#8b7f70;letter-spacing:.04em}
+.o1 h1{font:600 56px/1 "Fraunces",serif;letter-spacing:-.03em;margin:10px 0 8px;max-width:620px}
+.o1 .subt{font:italic 20px/1.3 "Fraunces",serif;color:#6b6156;margin-bottom:10px}
+.o1 .by{font:italic 22px "Fraunces",serif;color:#4a4036}
+.o1 .by b{font-style:normal;font-weight:600;color:#1f1b16}
+.o1 .desc{margin:22px 0;max-width:580px;font-size:16px;line-height:1.65;color:#3a332b}
+.o1 .desc::first-letter{font:600 58px/0.8 "Fraunces",serif;float:left;margin:6px 10px 0 0;color:#8a2c1d}
+.o1 .facts{display:grid;grid-template-columns:repeat(3,auto);gap:14px 40px;justify-content:start;padding:18px 0;border-top:1px solid #d9cfbd;border-bottom:1px solid #d9cfbd;max-width:580px}
+.o1 .facts dt{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#8b7f70}
+.o1 .facts dd{font-size:15px;font-weight:500}
+.o1 .acts{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;margin-top:26px}
+.o1 .acts button{white-space:nowrap}
+.o1 .acts .lnk{background:none;border:0;color:#1f1b16;text-decoration:underline;text-underline-offset:4px;text-decoration-color:#c2b6a4}
+.o1 .acts .lnk:hover{text-decoration-color:#8a2c1d;color:#8a2c1d}
+.o1 .progress{margin-top:22px;font-size:13px;color:#6b6156;max-width:580px}
+.o1 .progress .bar{height:3px;background:#d9cfbd;margin-top:6px}
+.o1 .progress .bar span{display:block;height:100%;background:#8a2c1d}
+.o1 .shelf{border-left:1px solid #d9cfbd;display:flex;flex-direction:column;min-height:0;background:#efe7d9}
+.o1 .shelf-h{display:flex;justify-content:space-between;align-items:baseline;padding:30px 32px 14px}
+.o1 .shelf-h h3{font:600 26px "Fraunces",serif}
+.o1 .shelf-h select{background:none;border:0;font:13px "Public Sans";color:#6b6156}
+.o1 .list{overflow:auto;padding:0 20px 20px}
+.o1 .row{display:grid;grid-template-columns:34px 1fr auto;gap:2px 12px;width:100%;text-align:left;background:none;border:0;padding:9px 12px;border-bottom:1px dotted #c9bda9;color:inherit;border-radius:3px;align-items:center}
+.o1 .row:hover{background:#e6dccb}
+.o1 .row.on{background:#1f1b16;color:#f3ede2}
+.o1 .row.on .a,.o1 .row.on .f{color:#cdbfaa}
+.o1 .row .cv{width:34px;height:50px;border-radius:2px;grid-row:1/3}
+.o1 .row .cv span{display:none}
+.o1 .row .t{font:500 17px/1.2 "Fraunces",serif}
+.o1 .row .a{font-size:13px;color:#7b7064}
+.o1 .row .f{grid-row:1/3;grid-column:3;align-self:center;font-size:11px;letter-spacing:.08em;color:#8b7f70}
+.o1 .status{display:flex;gap:28px;align-items:center;padding:0 44px;border-top:1px solid #d9cfbd;font-size:12.5px;color:#6b6156}
+.o1 .status .dev{margin-left:auto;color:#1f1b16}
+.o1 .stag>*{animation:o1in .6s cubic-bezier(.2,.7,.2,1) both}
+.o1 .stag>*:nth-child(2){animation-delay:.05s}.o1 .stag>*:nth-child(3){animation-delay:.1s}
+.o1 .stag>*:nth-child(4){animation-delay:.15s}.o1 .stag>*:nth-child(5){animation-delay:.2s}
+.o1 .stag>*:nth-child(6){animation-delay:.25s}.o1 .stag>*:nth-child(7){animation-delay:.3s}.o1 .stag>*:nth-child(8){animation-delay:.35s}
+@keyframes o1in{from{opacity:0;transform:translateY(14px)}}
+.o1 .spread>.cv{animation:o1cv .7s cubic-bezier(.2,.7,.2,1) both}
+@keyframes o1cv{from{opacity:0;transform:translateX(-18px) rotate(-1.5deg)}}
+
+/* ============ OPTION 2 — COMMAND DECK ============ */
+.o2{--bg:#0e1014;--p1:#14171d;--p2:#1a1e26;--ln:#252a34;--tx:#d7dbe2;--mu:#7d8594;--ac:#f5a524;
+  background:var(--bg);color:var(--tx);font:13px/1.4 "IBM Plex Sans",sans-serif;height:100%;display:grid;grid-template-rows:46px 1fr 28px;position:relative}
+.o2 .mono{font-family:"JetBrains Mono",monospace}
+.o2 button{font:inherit;color:inherit;cursor:pointer}
+.o2 :focus-visible{outline:1px solid var(--ac);outline-offset:1px}
+.o2 .top{display:flex;align-items:center;gap:6px;padding:0 10px;border-bottom:1px solid var(--ln);background:var(--p1)}
+.o2 .lib{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:5px;background:none;border:1px solid var(--ln);font-weight:500;margin-right:8px}
+.o2 .lib i{width:8px;height:8px;border-radius:2px;background:var(--ac);display:inline-block}
+.o2 .tb{background:none;border:0;padding:6px 10px;border-radius:5px;color:#b9bfca}
+.o2 .tb:hover{background:var(--p2);color:#fff}
+.o2 .tb.pri{color:var(--ac)}
+.o2 .cmd{margin-left:auto;display:flex;align-items:center;gap:10px;width:380px;padding:6px 10px;background:var(--bg);border:1px solid var(--ln);border-radius:5px;color:var(--mu);text-align:left}
+.o2 .cmd:hover{border-color:#3a4150}
+.o2 .cmd kbd{margin-left:auto;font:11px "JetBrains Mono";border:1px solid var(--ln);border-radius:3px;padding:0 5px}
+.o2 .body{display:grid;grid-template-columns:230px 1fr 330px;min-height:0}
+.o2 .tree{border-right:1px solid var(--ln);overflow:auto;padding:8px 0;background:var(--p1)}
+.o2 .grp>button{display:flex;align-items:center;gap:6px;width:100%;background:none;border:0;padding:5px 12px;text-align:left;color:var(--mu);font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600}
+.o2 .grp>button::before{content:"";width:0;height:0;border-left:4px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform .12s}
+.o2 .grp.open>button::before{transform:rotate(90deg)}
+.o2 .grp ul{list-style:none;display:none;padding-bottom:6px}
+.o2 .grp.open ul{display:block}
+.o2 .grp li button{display:flex;width:100%;justify-content:space-between;gap:8px;background:none;border:0;padding:3px 12px 3px 26px;text-align:left;color:#c3c8d1}
+.o2 .grp li button span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.o2 .grp li button:hover{background:var(--p2)}
+.o2 .grp li button.on{background:rgba(245,165,36,.12);color:var(--ac)}
+.o2 .grp li span:last-child{font:11px "JetBrains Mono";color:var(--mu)}
+.o2 .tbl{overflow:auto;min-width:0}
+.o2 table{width:100%;border-collapse:collapse;table-layout:fixed}
+.o2 th{position:sticky;top:0;background:var(--p1);text-align:left;font-weight:500;color:var(--mu);font-size:11.5px;padding:0 10px;height:30px;border-bottom:1px solid var(--ln);cursor:pointer;user-select:none;white-space:nowrap}
+.o2 th:hover{color:var(--tx)}
+.o2 th.sorted{color:var(--ac)}
+.o2 th.sorted::after{content:" ↓"}
+.o2 th.sorted.asc::after{content:" ↑"}
+.o2 td{padding:0 10px;height:29px;border-bottom:1px solid #171a21;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.o2 tbody tr{cursor:default;transition:background .1s}
+.o2 tbody tr:hover{background:#161a21}
+.o2 tbody tr.on{background:rgba(245,165,36,.10);box-shadow:inset 2px 0 var(--ac)}
+.o2 td.r{color:var(--ac);letter-spacing:-1px;font-size:11px}
+.o2 td.n{font:12px "JetBrains Mono";color:#9aa2b0}
+.o2 .fmt{font:10.5px "JetBrains Mono";color:#9aa2b0;margin-right:6px}
+.o2 .insp{border-left:1px solid var(--ln);background:var(--p1);overflow:auto;padding:16px}
+.o2 .insp-h{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:end}
+.o2 .insp .cv{width:96px;height:144px;padding:10px 8px;border-radius:3px}
+.o2 .cv .cv-t{font:600 13px/1.1 "IBM Plex Sans"}
+.o2 .cv .cv-a{font:10px "JetBrains Mono";opacity:.8}
+.o2 .insp h3{font-size:18px;font-weight:600;line-height:1.2}
+.o2 .insp .au{color:var(--mu);margin-top:3px}
+.o2 .kv{display:grid;grid-template-columns:86px 1fr;gap:6px 10px;margin:18px 0;font-size:12px}
+.o2 .kv dt{color:var(--mu)}
+.o2 .kv dd{font-family:"JetBrains Mono",monospace;font-size:11.5px;overflow-wrap:anywhere}
+.o2 .insp p{color:#aab1bd;line-height:1.55;font-size:12.5px}
+.o2 .insp .row{display:flex;gap:6px;margin-top:16px}
+.o2 .ib{flex:1;background:var(--p2);border:1px solid var(--ln);padding:7px 0;border-radius:5px}
+.o2 .ib:hover{border-color:#3a4150}
+.o2 .ib.pri{background:var(--ac);color:#111;border-color:var(--ac);font-weight:600}
+.o2 .status{display:flex;align-items:center;gap:20px;padding:0 12px;border-top:1px solid var(--ln);background:var(--p1);color:var(--mu);font:11px "JetBrains Mono"}
+.o2 .status .job{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--tx)}
+.o2 .status .meter{width:90px;height:4px;background:var(--ln);border-radius:2px;overflow:hidden}
+.o2 .status .meter span{display:block;height:100%;width:62%;background:var(--ac);animation:o2m 6s linear infinite}
+@keyframes o2m{0%{width:20%}100%{width:96%}}
+.o2 .pal-bg{position:absolute;inset:0;background:rgba(5,6,8,.55);display:none;align-items:flex-start;justify-content:center;padding-top:110px;z-index:5}
+.o2 .pal-bg.open{display:flex}
+.o2 .pal{width:620px;background:var(--p2);border:1px solid #333a47;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.6);overflow:hidden;animation:o2p .14s ease-out}
+@keyframes o2p{from{opacity:0;transform:translateY(-6px) scale(.985)}}
+.o2 .pal input{width:100%;background:none;border:0;border-bottom:1px solid var(--ln);padding:16px 18px;font:15px "IBM Plex Sans";color:var(--tx);outline:none}
+.o2 .pal ul{list-style:none;max-height:360px;overflow:auto;padding:6px}
+.o2 .pal li{display:flex;justify-content:space-between;padding:8px 12px;border-radius:6px;color:#c3c8d1;cursor:pointer}
+.o2 .pal li.hi{background:rgba(245,165,36,.12);color:#fff}
+.o2 .pal li small{font:11px "JetBrains Mono";color:var(--mu)}
+.o2 .pal .sec{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mu);padding:10px 12px 4px}
+
+/* ============ OPTION 3 — QUEUE (Linear-inspired) ============ */
+.o3{--out:#08090a;--panel:#101113;--raise:#17181b;--pop:#1c1d21;--ln:rgba(255,255,255,.07);--ln2:rgba(255,255,255,.11);
+  --tx:#ecedee;--tx2:#c9cbcf;--mu:#8a8f98;--fa:#62666d;--hv:rgba(255,255,255,.035);--sel:rgba(255,255,255,.06);
+  --ac:#5e6ad2;--ac2:#7c85e0;--prog:#f2c94c;--done:#4cb782;--star:#f5a524;--shadow:0 16px 48px rgba(0,0,0,.55);
+  background:var(--out);color:var(--tx);font:13px/1.45 "Inter",sans-serif;height:100%;display:grid;grid-template-columns:232px 1fr;position:relative;
+  font-feature-settings:"cv11","ss01";-webkit-font-smoothing:antialiased}
+.o3[data-theme=light]{--out:#f4f5f8;--panel:#fff;--raise:#f7f8fa;--pop:#fff;--ln:#e8e9ed;--ln2:#dcdde2;--tx:#1b1c1f;--tx2:#3c3f44;--mu:#6b6f76;--fa:#9a9ea6;
+  --hv:rgba(0,0,0,.025);--sel:rgba(94,106,210,.07);--done:#2f9e63;--star:#e3920b;--prog:#d9a400;--shadow:0 16px 48px rgba(20,20,40,.16)}
+.o3 button,.o3 input{font:inherit;color:inherit}
+.o3 button{cursor:pointer;background:none;border:0}
+.o3 :focus-visible{outline:2px solid var(--ac);outline-offset:-1px;border-radius:5px}
+.o3 svg{display:block;flex:none}
+/* sidebar */
+.o3 .sb{display:flex;flex-direction:column;padding:10px 8px;gap:2px;min-height:0}
+.o3 .ws{display:flex;align-items:center;gap:8px;padding:6px 8px;margin-bottom:6px}
+.o3 .ws .lg{width:20px;height:20px;display:block;flex:none}
+.o3 .ws b{font-weight:600;font-size:13px}
+.o3 .ws .ic{margin-left:auto;display:flex;gap:2px}
+.o3 .ws .ic button{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--mu)}
+.o3 .ws .ic button:hover{background:var(--hv);color:var(--tx)}
+.o3 .nv{display:flex;align-items:center;gap:9px;width:100%;padding:5px 8px;border-radius:6px;color:var(--tx2);text-align:left;font-weight:500}
+.o3 .nv:hover{background:var(--hv)}
+.o3 a.nv{text-decoration:none}
+.o3 .nv .ul{width:14px;display:grid;place-items:center}.o3 .nv .ul i{width:12px;height:2px;border-radius:1px;background:var(--prog)}
+.o3 .nv.on{background:var(--sel);color:var(--tx)}
+.o3 .nv .ct{margin-left:auto;color:var(--fa);font-size:12px;font-weight:400}
+.o3 .nv .dot{width:9px;height:9px;border-radius:50%;margin:0 2px}
+.o3 .sec{display:flex;align-items:center;justify-content:space-between;padding:16px 8px 4px;font-size:11.5px;font-weight:500;color:var(--fa)}
+.o3 .dev{display:flex;align-items:center;gap:9px;padding:5px 8px;color:var(--tx2);font-weight:500;white-space:nowrap}
+.o3 .dev small{margin-left:auto;font-weight:400;color:var(--fa);font-size:11.5px}
+.o3 .dev .led{flex:none;width:7px;height:7px;border-radius:50%;background:#4cb782;margin:0 3px}
+.o3 .dev .led.off{background:var(--fa)}
+.o3 .sb-foot{margin-top:auto;display:flex;flex-direction:column;gap:2px}
+.o3 .job{display:flex;align-items:center;gap:9px;padding:6px 8px;color:var(--mu);font-size:12px}
+.o3 .job .ring{animation:o3spin 1.4s linear infinite}
+@keyframes o3spin{to{transform:rotate(360deg)}}
+.o3 .theme{display:flex;gap:2px;padding:3px;background:var(--hv);border-radius:7px;margin:4px 8px 0}
+.o3 .theme button{flex:1;padding:3px 0;border-radius:5px;font-size:12px;color:var(--mu)}
+.o3 .theme button.on{background:var(--panel);color:var(--tx);box-shadow:0 0 0 1px var(--ln)}
+/* main panel */
+.o3 .main{margin:8px 8px 8px 0;background:var(--panel);border:1px solid var(--ln);border-radius:9px;display:grid;grid-template-rows:44px 40px 1fr;min-height:0;overflow:hidden;position:relative}
+.o3 .hd{display:flex;align-items:center;gap:10px;padding:0 14px 0 18px;border-bottom:1px solid var(--ln)}
+.o3 .hd .crumb{font-weight:500;color:var(--tx)}
+.o3 .hd .crumb span{color:var(--fa);margin:0 6px}
+.o3 .tabs{display:flex;gap:4px;margin-left:10px}
+.o3 .tabs button{padding:3px 10px;border-radius:6px;border:1px solid var(--ln);color:var(--mu);font-weight:500;font-size:12px}
+.o3 .tabs button.on{color:var(--tx);background:var(--raise);border-color:var(--ln2)}
+.o3 .hd .rt{margin-left:auto;display:flex;gap:6px}
+.o3 .hbtn{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:6px;border:1px solid var(--ln);color:var(--tx2);font-weight:500;font-size:12px}
+.o3 .hbtn:hover{background:var(--hv)}
+.o3 .hbtn b{font-weight:500;color:var(--tx)}
+.o3 .fbar{display:flex;align-items:center;gap:8px;padding:0 14px 0 18px;border-bottom:1px solid var(--ln)}
+.o3 .chip{display:flex;align-items:center;border:1px solid var(--ln2);border-radius:6px;font-size:12px;overflow:hidden}
+.o3 .chip span{padding:2px 7px;color:var(--mu)}
+.o3 .chip span+span{border-left:1px solid var(--ln);color:var(--tx)}
+.o3 .chip button{padding:2px 6px;border-left:1px solid var(--ln);color:var(--mu)}
+.o3 .chip button:hover{color:var(--tx);background:var(--hv)}
+.o3 .q{flex:1;border:0;background:none;outline:none;color:var(--tx);font-size:12.5px;padding:6px 0}
+.o3 .q::placeholder{color:var(--fa)}
+.o3 .kh{font-size:11.5px;color:var(--fa);display:flex;gap:12px;white-space:nowrap}
+.o3 kbd{font:500 10.5px "Inter";border:1px solid var(--ln2);border-radius:4px;padding:0 4px;color:var(--mu);background:var(--raise);margin-right:3px}
+.o3 .list{overflow:auto;outline:none;position:relative}
+.o3 .gh{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;height:36px;padding:0 14px 0 18px;background:var(--raise);border-bottom:1px solid var(--ln);font-weight:500;color:var(--tx)}
+.o3 .gh .cn{color:var(--fa);font-weight:400}
+.o3 .gh .chev{color:var(--fa);transition:transform .15s}
+.o3 .gh.closed .chev{transform:rotate(-90deg)}
+.o3 .gh .plus{margin-left:auto;width:24px;height:24px;border-radius:5px;display:grid;place-items:center;color:var(--fa)}
+.o3 .gh .plus:hover{background:var(--hv);color:var(--tx)}
+.o3 .row{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px 0 14px;border-bottom:1px solid var(--ln);cursor:default;position:relative}
+.o3 .row:hover{background:var(--hv)}
+.o3 .row.focus{background:var(--sel)}
+.o3 .row.focus::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--ac)}
+.o3 .row.picked{background:rgba(94,106,210,.13)}
+.o3 .cb{width:14px;height:14px;border-radius:4px;border:1px solid var(--ln2);display:grid;place-items:center;opacity:0;transition:opacity .1s;flex:none}
+.o3 .row:hover .cb,.o3 .row.picked .cb,.o3.selecting .cb{opacity:1}
+.o3 .row.picked .cb{background:var(--ac);border-color:var(--ac)}
+.o3 .st{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;flex:none}
+.o3 .st:hover{background:var(--hv)}
+.o3 .row .cv{width:18px;height:26px;border-radius:2px;flex:none;box-shadow:0 0 0 1px var(--ln)}
+.o3 .row .cv span{display:none}
+.o3 .tt{font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.o3 .au{color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 10 auto;min-width:0}
+.o3 .sp{flex:1 1 0;min-width:8px}
+.o3 .lb{display:flex;align-items:center;gap:6px;border:1px solid var(--ln2);border-radius:999px;padding:1px 8px 1px 7px;font-size:11.5px;color:var(--tx2);white-space:nowrap;flex:none}
+.o3 .lb i{width:7px;height:7px;border-radius:50%}
+.o3 .ser{font-size:11.5px;color:var(--mu);white-space:nowrap;display:flex;align-items:center;gap:5px;flex:none}
+.o3 .fm{font-size:11px;color:var(--fa);width:112px;white-space:nowrap;text-align:right;flex:none;letter-spacing:.02em}
+.o3 .stars{color:var(--star);font-size:11.5px;letter-spacing:-.5px;white-space:nowrap;flex:none}
+.o3 .stars i{font-style:normal;color:var(--ln2)}
+.o3 .rt2{width:66px;text-align:right}
+.o3 .dt{font-size:12px;color:var(--fa);width:46px;text-align:right;flex:none}
+.o3 .row.moved{animation:o3flash 1s ease-out}
+@keyframes o3flash{from{background:rgba(94,106,210,.28)}}
+/* popover menu */
+.o3 .menu{position:absolute;z-index:20;min-width:210px;background:var(--pop);border:1px solid var(--ln2);border-radius:8px;box-shadow:var(--shadow);padding:4px;animation:o3pop .12s ease-out}
+@keyframes o3pop{from{opacity:0;transform:translateY(-4px) scale(.98)}}
+.o3 .menu .mh{padding:6px 8px 4px;font-size:11.5px;color:var(--fa)}
+.o3 .menu button{display:flex;align-items:center;gap:9px;width:100%;padding:6px 8px;border-radius:5px;text-align:left;color:var(--tx2)}
+.o3 .menu button:hover,.o3 .menu button.hi{background:var(--sel);color:var(--tx)}
+.o3 .menu button kbd{margin-left:auto}
+.o3 .menu hr{border:0;border-top:1px solid var(--ln);margin:4px 0}
+/* selection bar */
+.o3 .selbar{position:absolute;left:50%;bottom:18px;transform:translate(-50%,20px);opacity:0;pointer-events:none;display:flex;align-items:center;gap:2px;background:var(--pop);border:1px solid var(--ln2);border-radius:9px;box-shadow:var(--shadow);padding:4px;transition:.18s cubic-bezier(.3,.8,.2,1);z-index:6}
+.o3 .selbar.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.o3 .selbar .n{padding:4px 10px;font-weight:500;border-right:1px solid var(--ln);margin-right:2px}
+.o3 .selbar button{padding:5px 10px;border-radius:6px;color:var(--tx2);font-weight:500}
+.o3 .selbar button:hover{background:var(--hv);color:var(--tx)}
+/* peek panel */
+.o3 .peek{position:absolute;top:0;right:0;bottom:0;width:760px;background:var(--panel);border-left:1px solid var(--ln2);box-shadow:var(--shadow);display:grid;grid-template-rows:44px 1fr;transform:translateX(102%);transition:transform .22s cubic-bezier(.3,.8,.2,1);z-index:8}
+.o3 .peek.open{transform:none}
+.o3 .pk-h{display:flex;align-items:center;gap:8px;padding:0 10px 0 18px;border-bottom:1px solid var(--ln);color:var(--mu);font-size:12.5px}
+.o3 .pk-h b{color:var(--tx);font-weight:500}
+.o3 .pk-h .x{margin-left:auto;width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--mu)}
+.o3 .pk-h .x:hover{background:var(--hv);color:var(--tx)}
+.o3 .pk-b{display:grid;grid-template-columns:1fr 250px;min-height:0}
+.o3 .pk-main{padding:28px 30px;overflow:auto}
+.o3 .pk-main h2{font:600 26px/1.2 "Inter";letter-spacing:-.02em}
+.o3 .pk-main .sub{color:var(--mu);font-size:15px;margin-top:4px}
+.o3 .pk-main p{color:var(--tx2);font-size:14px;line-height:1.65;margin-top:16px}
+.o3 .pk-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:20px}
+.o3 .pk-acts button{white-space:nowrap}
+.o3 .pk-acts button{padding:6px 12px;border-radius:6px;border:1px solid var(--ln2);font-weight:500;color:var(--tx2)}
+.o3 .pk-acts button:hover{background:var(--hv)}
+.o3 .pk-acts .pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.o3 .pk-acts .pri:hover{background:var(--ac2)}
+.o3 .act{margin-top:30px;border-top:1px solid var(--ln);padding-top:18px}
+.o3 .act h4{font-weight:500;font-size:13px;margin-bottom:12px}
+.o3 .ev{display:flex;gap:10px;align-items:flex-start;padding:5px 0;color:var(--mu);font-size:12.5px;position:relative}
+.o3 .ev::before{content:"";position:absolute;left:6px;top:20px;bottom:-6px;width:1px;background:var(--ln2)}
+.o3 .ev:last-child::before{display:none}
+.o3 .ev .e-dot{width:13px;height:13px;border-radius:50%;border:1px solid var(--ln2);background:var(--panel);display:grid;place-items:center;flex:none;margin-top:2px;position:relative;z-index:1}
+.o3 .ev .e-dot i{width:5px;height:5px;border-radius:50%;background:var(--fa)}
+.o3 .ev b{color:var(--tx2);font-weight:500}
+.o3 .ev time{margin-left:6px;color:var(--fa)}
+.o3 .pk-side{border-left:1px solid var(--ln);padding:18px 16px;overflow:auto;background:var(--raise)}
+.o3 .pk-side .cv{width:120px;height:180px;border-radius:4px;margin:0 0 16px;box-shadow:0 8px 20px -8px rgba(0,0,0,.5)}
+.o3 .pk-side .cv span{display:none}
+.o3 .pr{display:grid;grid-template-columns:78px 1fr;align-items:center;gap:8px;min-height:30px;font-size:12.5px}
+.o3 .pr dt{color:var(--mu)}
+.o3 .pr dd{color:var(--tx2);display:flex;align-items:center;gap:6px;flex-wrap:wrap;overflow-wrap:anywhere}
+.o3 .pr dd a{color:var(--ac2);text-decoration:none}
+.o3 .pr dd a:hover{text-decoration:underline}
+.o3 .pr .stbtn{display:flex;align-items:center;gap:7px;padding:3px 6px;margin-left:-6px;border-radius:5px;color:var(--tx)}
+.o3 .pr .stbtn:hover{background:var(--hv)}
+</style>
+</head>
+<body>
+<div id="viewport" aria-label="Design canvas"><div id="world"></div></div>
+<div id="hud" role="toolbar" aria-label="Canvas controls">
+  <button data-go="all">Fit all</button><span class="sep"></span>
+  <button data-go="1">1</button><button data-go="2">2</button><button data-go="3">3</button>
+  <span class="sep"></span><button data-z="-1" aria-label="Zoom out">−</button><span id="zoomPct">100%</span><button data-z="1" aria-label="Zoom in">+</button>
+  <span class="sep"></span><span id="src"><i></i>Open Library</span><button id="gkey" title="Use your Google Books API key">Google key…</button>
+</div>
+
+<script>
+/* ============ DATA ============
+   Bibliographic fields are real: an Open Library snapshot taken 23 Oct 2026, looked up by ISBN.
+   On load the page asks Google Books (live) for the same ISBNs and overlays its fields when it answers.
+   Library-state fields (formats, file size, date added, reading status, progress) are what a calibre
+   user's own library would hold, so they are set here. */
+const OPEN_LIBRARY = [{"id": 1001, "t": "Project Hail Mary", "sub": null, "a": "Andy Weir", "sk": "Weir", "y": 2021, "ed": "2021", "pub": "Ballantine Books", "pages": 496, "tags": ["Science Fiction"], "d": "Ryland Grace is the sole survivor on a desperate, last-chance mission–and if he fails, humanity and the earth itself will perish. Except that right now, he doesn’t know that. He can’t even remember his own name, let alone the nature of his assignment or how to complete it. All he knows is that he’s been asleep for a very, very long time.", "cover": "https://covers.openlibrary.org/b/id/12455001-L.jpg?default=false", "isbn": "9780593135204", "olid": "/works/OL21745884W", "olr": 4.52}, {"id": 1002, "t": "Dune", "sub": null, "a": "Frank Herbert", "sk": "Herbert", "y": 1965, "ed": "2020", "pub": "Ace", "pages": 896, "tags": ["Science Fiction"], "d": "Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world where the only thing of value is the \"spice\" melange, a drug capable of extending life and enhancing consciousness. Coveted across the known universe, melange is a prize worth killing for...", "cover": "https://covers.openlibrary.org/b/id/15110282-L.jpg?default=false", "isbn": "9780441172719", "olid": "/works/OL893414W", "olr": 4.31, "series": "Dune Chronicles", "si": 1}, {"id": 1003, "t": "The Left Hand of Darkness", "sub": null, "a": "Ursula K. Le Guin", "sk": "Guin", "y": 1969, "ed": "2003", "pub": "Ace Books", "pages": 304, "tags": ["Science Fiction"], "d": "Kim Stanley Robinson in The Guardian: One of my favorite novels is The Left Hand of Darkness, by Ursula K Le Guin. For more than 40 years I've been recommending this book to people who want to try science fiction for the first time, and it still serves very well for that.", "cover": "https://covers.openlibrary.org/b/id/6989406-L.jpg?default=false", "isbn": "9780441478125", "olid": "/works/OL59800W", "olr": 4.26}, {"id": 1004, "t": "Piranesi", "sub": null, "a": "Susanna Clarke", "sk": "Clarke", "y": 2020, "ed": "2020", "pub": "Bloomsbury Publishing", "pages": 245, "tags": ["Fantasy"], "d": "Piranesi's house is no ordinary building; its rooms are infinite, its corridors endless, its walls are lined with thousands upon thousands of statues, each one different from all the others.", "cover": "https://covers.openlibrary.org/b/id/10226290-L.jpg?default=false", "isbn": "9781635575637", "olid": "/works/OL20893680W", "olr": 4.33}, {"id": 1005, "t": "Klara and the Sun", "sub": "A novel", "a": "Kazuo Ishiguro", "sk": "Ishiguro", "y": 2019, "ed": "2021", "pub": "Knopf", "pages": 304, "tags": ["Literary Fiction", "Science Fiction"], "d": "\"Klara and the Sun, the first novel by Kazuo Ishiguro since he was awarded the Nobel Prize in Literature, tells the story of Klara, an Artificial Friend with outstanding observational qualities, who, from her place in the store, watches carefully the behavior of those who come in to browse, and of those who pass on the street outside.", "cover": "https://covers.openlibrary.org/b/id/10673548-L.jpg?default=false", "isbn": "9780593318171", "olid": "/works/OL20883297W", "olr": 3.79}, {"id": 1006, "t": "The Remains of the Day", "sub": null, "a": "Kazuo Ishiguro", "sk": "Ishiguro", "y": 1989, "ed": "1993", "pub": "Vintage International", "pages": 254, "tags": ["Literary Fiction"], "d": "In the summer of 1956, Stevens, the ageing butler of Darlington Hall, embarks on a leisurely holiday that will take him deep into the countryside and into his past . .", "cover": "https://covers.openlibrary.org/b/id/15241848-L.jpg?default=false", "isbn": "9780679731726", "olid": "/works/OL59048W", "olr": 4.21}, {"id": 1007, "t": "Thinking, Fast and Slow", "sub": null, "a": "Daniel Kahneman", "sk": "Kahneman", "y": 2011, "ed": "2011", "pub": "Farrar, Straus and Giroux", "pages": 548, "tags": ["Nonfiction", "Psychology"], "d": "In his mega bestseller, Thinking, Fast and Slow, Daniel Kahneman, world-famous psychologist and winner of the Nobel Prize in Economics, takes us on a groundbreaking tour of the mind and explains the two systems that drive the way we think. System 1 is fast, intuitive, and emotional; System 2 is slower, more deliberative, and more logical.", "cover": "https://covers.openlibrary.org/b/id/13290711-L.jpg?default=false", "isbn": "9780374275631", "olid": "/works/OL44009686W", "olr": null}, {"id": 1008, "t": "Sapiens", "sub": "A Brief History of Humankind", "a": "Yuval Noah Harari", "sk": "Harari", "y": 2011, "ed": "2011", "pub": "Harper", "pages": 464, "tags": ["Nonfiction", "History"], "d": "From a renowned historian comes a groundbreaking narrative of humanity’s creation and evolution—a #1 international bestseller—that explores the ways in which biology and history have defined us and enhanced our understanding of what it means to be “human.”", "cover": "https://covers.openlibrary.org/b/id/14369194-L.jpg?default=false", "isbn": "9780062316097", "olid": "/works/OL17075811W", "olr": 4.19}, {"id": 1009, "t": "Circe", "sub": null, "a": "Madeline Miller", "sk": "Miller", "y": 2018, "ed": "2018", "pub": "Little, Brown and Company", "pages": 393, "tags": ["Fantasy", "Mythology"], "d": "In the house of Helios, god of the sun and mightiest of the Titans, a daughter is born. But Circe is a strange child--not powerful, like her father, nor viciously alluring like her mother.", "cover": "https://covers.openlibrary.org/b/id/8283869-L.jpg?default=false", "isbn": "9780316556347", "olid": "/works/OL18012166W", "olr": 4.15}, {"id": 1010, "t": "The Three-Body Problem", "sub": null, "a": "Cixin Liu", "sk": "Liu", "y": 2008, "ed": "2016", "pub": "A Tor Book / Tom Doherty Associates", "pages": 416, "tags": ["Science Fiction"], "d": "Cixin Liu's trilogy-opening novel about first contact with aliens and the clandestine struggle with them over Earth's future, and its scientific progress in particular. Set against the backdrop of China's Cultural Revolution, a secret military project sends signals into space in an attempt to make contact with aliens—and they succeed.", "cover": "https://covers.openlibrary.org/b/id/8478888-L.jpg?default=false", "isbn": "9780765382030", "olid": "/works/OL17267881W", "olr": 3.94, "series": "Remembrance of Earth's Past", "si": 1}, {"id": 1011, "t": "The Dark Forest", "sub": null, "a": "Cixin Liu", "sk": "Liu", "y": 2008, "ed": "2016", "pub": "Tor Books", "pages": 562, "tags": ["Science Fiction"], "d": "In The Dark Forest, Earth is reeling from the revelation of a coming alien invasion-in just four centuries' time.", "cover": "https://covers.openlibrary.org/b/id/14570131-L.jpg?default=false", "isbn": "9780765386694", "olid": "/works/OL16314245W", "olr": 4.44, "series": "Remembrance of Earth's Past", "si": 2}, {"id": 1012, "t": "Educated", "sub": null, "a": "Tara Westover", "sk": "Westover", "y": 2018, "ed": "2018", "pub": "Random House", "pages": 384, "tags": ["Nonfiction", "Memoir"], "d": "Educated is a 2018 memoir by the American author Tara Westover. Westover recounts overcoming her survivalist Mormon family in order to go to college, and emphasizes the importance of education in enlarging her world.", "cover": "https://covers.openlibrary.org/b/id/8314077-L.jpg?default=false", "isbn": "9780399590511", "olid": "/works/OL18139176W", "olr": 4.45}, {"id": 1013, "t": "A Gentleman in Moscow", "sub": null, "a": "Amor Towles", "sk": "Towles", "y": 2016, "ed": "2016", "pub": "Viking", "pages": 462, "tags": ["Literary Fiction", "Historical Fiction"], "d": "A Gentleman in Moscow is a 2016 novel by Amor Towles.", "cover": "https://covers.openlibrary.org/b/id/11563116-L.jpg?default=false", "isbn": "9780670026197", "olid": "/works/OL17797130W", "olr": 3.89}, {"id": 1014, "t": "The Hobbit", "sub": null, "a": "J. R. R. Tolkien", "sk": "Tolkien", "y": 1937, "ed": "2012", "pub": "Mariner Books", "pages": 300, "tags": ["Fantasy", "Classics"], "d": "The Hobbit is a tale of high adventure, undertaken by a company of dwarves in search of dragon-guarded gold. A reluctant partner in this perilous quest is Bilbo Baggins, a comfort-loving unambitious hobbit, who surprises even himself by his resourcefulness and skill as a burglar.", "cover": "https://covers.openlibrary.org/b/id/12003329-L.jpg?default=false", "isbn": "9780547928227", "olid": "/works/OL27482W", "olr": 4.3}, {"id": 1015, "t": "Middlemarch", "sub": null, "a": "George Eliot", "sk": "Eliot", "y": 1871, "ed": "2003", "pub": "Penguin Classics", "pages": 810, "tags": ["Classics", "Literary Fiction"], "d": "Eliot’s epic of 19th century provincial social life, set in a fictitious Midlands town in the years 1830-32, has several interlocking storylines blended effortlessly together to form a fully coherent narrative. Its main themes are the status of women, social expectations and hypocrisy, religion, political reform and education.", "cover": "https://covers.openlibrary.org/b/id/9328284-L.jpg?default=false", "isbn": "9780141439549", "olid": "/works/OL20867W", "olr": 4.15}, {"id": 1016, "t": "Pride and Prejudice", "sub": null, "a": "Jane Austen", "sk": "Austen", "y": 1813, "ed": "2003", "pub": "Penguin Books", "pages": 435, "tags": ["Classics", "Romance"], "d": "Pride and Prejudice is an 1813 novel of manners written by Jane Austen. The novel follows the character development of Elizabeth Bennet, the dynamic protagonist of the book who learns about the repercussions of hasty judgments and comes to appreciate the difference between superficial goodness and actual goodness. Mr.", "cover": "https://covers.openlibrary.org/b/id/12645114-L.jpg?default=false", "isbn": "9780141439518", "olid": "/works/OL66554W", "olr": 4.21}];
+const LOCAL = {
+  "Project Hail Mary":["reading",64,["EPUB","AZW3"]], "Dune":["finished",100,["EPUB","AZW3","PDF"]], "The Left Hand of Darkness":["want",0,["EPUB"]],
+  "Piranesi":["want",0,["EPUB","AZW3"]], "Klara and the Sun":["want",0,["EPUB"]], "The Remains of the Day":["finished",100,["EPUB","MOBI"]],
+  "Thinking, Fast and Slow":["want",0,["PDF","EPUB"]], "Sapiens":["want",0,["EPUB","PDF"]], "Circe":["finished",100,["EPUB"]],
+  "The Three-Body Problem":["finished",100,["EPUB","AZW3"]], "The Dark Forest":["reading",22,["EPUB"]], "Educated":["want",0,["EPUB","AZW3"]],
+  "A Gentleman in Moscow":["want",0,["EPUB"]], "The Hobbit":["finished",100,["EPUB","MOBI","PDF"]], "Middlemarch":["reading",39,["EPUB","AZW3"]],
+  "Pride and Prejudice":["finished",100,["EPUB"]],
+};
+const PALETTE = [["#2f4a3a","#f0e6cf"],["#1d3557","#f1faee"],["#5b1a18","#f3d9a4"],["#264653","#e9c46a"],["#3d405b","#f2cc8f"],["#8c2f39","#fcefd5"],["#0f4c5c","#f5d491"],["#4a3b5c","#efe1c6"]];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+let BOOKS = [];
+let SOURCE = "openlibrary";
+function buildBooks(src) {
+  BOOKS = src.map((b, i) => {
+    const [st, prog, fmt] = LOCAL[b.t] || ["want", 0, ["EPUB"]];
+    const added = new Date(Date.UTC(2026, 9, 21) - i * 5 * 864e5);
+    const [c1, c2] = PALETTE[i % PALETTE.length];
+    return {...b, st, prog, fmt, c1, c2, r: b.olr ? Math.round(b.olr) : 0,
+      size: (((b.pages || 300) * 0.0021) + 0.35).toFixed(1) + " MB",
+      added: `${String(added.getUTCDate()).padStart(2,"0")} ${MONTHS[added.getUTCMonth()]} 2026`, addedShort: `${MONTHS[added.getUTCMonth()]} ${added.getUTCDate()}`,
+      d: (b.d || "").replace(/^"/, "")};
+  });
+}
+buildBooks(OPEN_LIBRARY);
+const LIB_TOTAL = "1,284";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const stars = r => "★".repeat(r) + "☆".repeat(5 - r);
+const yr = y => y == null ? "—" : y < 0 ? `c. ${-y} BC` : y;
+const cover = (b, cls = "") => `<div class="cv ${cls}" style="--c1:${b.c1};--c2:${b.c2}"><span class="cv-t">${esc(b.t)}</span><span class="cv-a">${esc(b.a)}</span>${b.cover ? `<img src="${esc(b.cover)}" alt="Cover of ${esc(b.t)}" decoding="async" onerror="this.remove()">` : ""}</div>`;
+const byId = id => BOOKS.find(b => b.id === +id);
+const countBy = fn => { const m = {}; BOOKS.forEach(b => [].concat(fn(b)).forEach(k => k && (m[k] = (m[k] || 0) + 1))); return Object.entries(m).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])); };
+const matches = (b, q) => !q || [b.t, b.sub, b.a, b.tags.join(" "), b.series, b.pub].join(" ").toLowerCase().includes(q.toLowerCase());
+const srcName = () => SOURCE === "google" ? "Google Books" : "Open Library";
+const STATUS = {reading: "Reading", want: "Not started", finished: "Finished"};
+
+/* ============ BOARDS ============ */
+const W = 1440, H = 900, GX = 1440 + 260, GY = 900 + 150 + 220;
+const META = [null,
+ {slug:"reading-room",name:"Reading Room",thesis:"Treat the selected book as a magazine spread; the library list becomes a margin index you consult, not a spreadsheet you scan.",tone:"Editorial, literary",theme:"Light / paper",type:"Fraunces + Public Sans",layout:"Magazine columns",motion:"Staggered reveal"},
+ {slug:"command-deck",name:"Command Deck",thesis:"Calibre's power users live in the table. Make it denser and faster, and put every action behind one command palette.",tone:"Pro tool, IDE",theme:"Dark",type:"IBM Plex Sans + JetBrains Mono",layout:"Three-pane, fixed sidebar",motion:"Restrained micro-interactions"},
+ {slug:"queue",name:"Queue",thesis:"Borrow Linear's model: books move through a reading workflow, grouped by status, driven from the keyboard, with a peek panel and an activity log per book.",tone:"Linear-inspired, calm",theme:"Dark + light toggle",type:"Inter",layout:"Sidebar + grouped list + peek",motion:"Quick popovers, slide-in peek"},
+];
+const POS = [[0,0],[GX,0],[0,GY],[GX,GY]];
+const world = document.getElementById("world");
+
+function drawIntro() {
+  const el = document.getElementById("intro");
+  const html = `<h1>Calibre, three ways</h1>
+  <p class="lede">Three directions for calibre's main library window, all showing the same 16 real books. Each one covers the same jobs: browse by author, tag or series, search, see details, then read, convert, send to a device or edit metadata. Every screen is live, so click around.</p>
+  <table><thead><tr><th></th><th>Direction</th><th>Leads with</th><th>Theme</th><th>Best for</th></tr></thead><tbody>
+  <tr><td>1</td><td><b>Reading Room</b></td><td>The selected book</td><td>Light paper</td><td>Readers with modest libraries</td></tr>
+  <tr><td>2</td><td><b>Command Deck</b></td><td>The data table</td><td>Dark</td><td>Power users with 10k+ books (today's core users)</td></tr>
+  <tr><td>3</td><td><b>Queue</b></td><td>Reading status and the keyboard</td><td>Dark or light</td><td>People who treat their library as a to-read pipeline</td></tr>
+  </tbody></table>
+  <p class="src">${SOURCE === "google" ? "Book data is <b>live from Google Books</b>" : "Book data comes from an <b>Open Library snapshot</b> (Google Books isn't answering right now)"}: titles, authors, publishers, page counts, descriptions, ratings and covers. The page tries Google Books first on every load. Formats, file sizes, dates added and reading progress are invented, since those come from your own library.</p>
+  <p class="keys">Drag the background to pan · <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + scroll or pinch to zoom · <kbd>1</kbd>–<kbd>3</kbd> jump to an option · <kbd>0</kbd> fit all</p>`;
+  if (el) el.innerHTML = html;
+  else world.insertAdjacentHTML("beforeend", `<section class="board intro" id="intro" style="left:${POS[0][0]}px;top:${POS[0][1]}px">${html}</section>`);
+}
+drawIntro();
+for (let i = 1; i <= 3; i++) {
+  const m = META[i];
+  world.insertAdjacentHTML("beforeend", `<section class="board" id="b${i}" style="left:${POS[i][0]}px;top:${POS[i][1]}px">
+    <div class="board-label" data-go="${i}" title="Zoom to this option">
+      <div class="num">Option ${i} / option-${i}-${m.slug}</div><h2>${m.name}</h2><p>${m.thesis}</p>
+    </div>
+    <div class="screen"><div class="o${i}" id="o${i}"></div></div>
+    <div class="board-label" style="height:auto;padding:22px 0 0;cursor:default">
+      <div class="axes"><span>Tone <b>${m.tone}</b></span><span>Theme <b>${m.theme}</b></span><span>Type <b>${m.type}</b></span><span>Layout <b>${m.layout}</b></span><span>Motion <b>${m.motion}</b></span></div>
+    </div>
+  </section>`);
+}
+
+/* ============ OPTION 1 — READING ROOM ============ */
+function mount1() {
+  const root = document.getElementById("o1");
+  let sel = BOOKS[0].id, filter = null, q = "", sort = "added";
+  const groups = [["Authors", countBy(b => b.a).slice(0, 6)], ["Series", countBy(b => b.series)], ["Tags", countBy(b => b.tags).slice(0, 8)], ["Formats", countBy(b => b.fmt)]];
+  root.innerHTML = `
+  <header class="mast">
+    <div class="wm">calibre <span>library</span></div>
+    <nav aria-label="Sections"><a href="#" class="on">Library</a><a href="#">Reading</a><a href="#">Devices</a><a href="#">Get books</a><a href="#">News</a></nav>
+    <label class="find"><input placeholder="Find among ${LIB_TOTAL} books…" aria-label="Search library"></label>
+    <button class="btn-ink">Add books</button>
+  </header>
+  <div class="cols">
+    <aside class="index" aria-label="Browse">${groups.map(([g, items]) => `<h4>${g}</h4>${items.map(([k, n]) => `<button data-f="${g}|${esc(k)}"><span>${esc(k)}</span><i>${n}</i></button>`).join("")}`).join("")}</aside>
+    <main class="spread"></main>
+    <aside class="shelf"><div class="shelf-h"><h3>On the shelf</h3><select aria-label="Sort"><option value="added">Recently added</option><option value="t">Title</option><option value="sk">Author</option><option value="olr">Rating</option></select></div><div class="list" data-scroll></div></aside>
+  </div>
+  <footer class="status"><span class="cnt"></span><span>Calibre Library · ~/Books</span><span>Metadata: ${srcName()}</span><span class="dev">Kindle Paperwhite connected · 3.2 GB free</span></footer>`;
+  const spread = root.querySelector(".spread"), list = root.querySelector(".list");
+  const visible = () => {
+    const v = BOOKS.filter(b => matches(b, q) && (!filter || ({Authors: b.a === filter[1], Series: b.series === filter[1], Tags: b.tags.includes(filter[1]), Formats: b.fmt.includes(filter[1])})[filter[0]]));
+    if (sort === "added") return v;
+    return [...v].sort((x, y) => sort === "olr" ? (y.olr || 0) - (x.olr || 0) : String(x[sort]).localeCompare(String(y[sort])));
+  };
+  function drawSpread() {
+    const b = byId(sel);
+    spread.innerHTML = `${cover(b)}<div class="stag">
+      <div class="meta-top">${b.tags.join(", ")}${b.series ? ` · ${esc(b.series)} #${b.si}` : ""}</div>
+      <h1>${esc(b.t)}</h1>${b.sub ? `<div class="subt">${esc(b.sub)}</div>` : ""}
+      <div class="by">by <b>${esc(b.a)}</b>, ${yr(b.y)}</div>
+      <p class="desc">${esc(b.d)}</p>
+      <dl class="facts"><div><dt>Formats</dt><dd>${b.fmt.join(", ")}</dd></div><div><dt>Pages</dt><dd>${b.pages ? b.pages.toLocaleString() : "—"}</dd></div><div><dt>Rating</dt><dd title="Average reader rating on ${srcName()}">${b.olr ? `${stars(b.r)} ${b.olr.toFixed(1)}` : "—"}</dd></div>
+        <div><dt>Publisher</dt><dd>${esc(b.pub) || "—"}</dd></div><div><dt>Edition</dt><dd>${b.ed || "—"}</dd></div><div><dt>ISBN</dt><dd>${b.isbn || "—"}</dd></div></dl>
+      ${b.st === "reading" ? `<div class="progress">${b.prog}% read, about ${Math.max(1, Math.round((b.pages || 300) * (100 - b.prog) / 100 / 40))} hours left<div class="bar"><span style="width:${b.prog}%"></span></div></div>` : b.st === "finished" ? `<div class="progress">Finished</div>` : ""}
+      <div class="acts"><button class="btn-ink">${b.st === "reading" ? "Continue reading" : "Read"}</button><button class="lnk">Convert</button><button class="lnk">Send to Kindle</button><button class="lnk">Edit metadata</button></div>
+    </div>`;
+  }
+  function drawList() {
+    const v = visible();
+    list.innerHTML = v.map(b => `<button class="row ${b.id === sel ? "on" : ""}" data-id="${b.id}">${cover(b)}<span class="t">${esc(b.t)}</span><span class="a">${esc(b.a)}</span><span class="f">${b.fmt.join(" · ")}</span></button>`).join("") || `<p style="padding:12px;color:#8b7f70">Nothing on the shelf matches.</p>`;
+    root.querySelector(".cnt").textContent = `${v.length} shown of ${LIB_TOTAL} books`;
+  }
+  list.addEventListener("click", e => { const r = e.target.closest(".row"); if (!r) return; sel = +r.dataset.id; drawList(); drawSpread(); });
+  root.querySelector(".index").addEventListener("click", e => {
+    const t = e.target.closest("button"); if (!t) return;
+    const f = t.dataset.f.split("|"); filter = filter && filter[1] === f[1] ? null : f;
+    root.querySelectorAll(".index button").forEach(x => x.classList.toggle("on", !!filter && x === t));
+    const v = visible(); if (v.length && !v.some(b => b.id === sel)) { sel = v[0].id; drawSpread(); }
+    drawList();
+  });
+  root.querySelector(".shelf-h select").addEventListener("change", e => { sort = e.target.value; drawList(); });
+  root.querySelector(".find input").addEventListener("input", e => { q = e.target.value; drawList(); });
+  drawSpread(); drawList();
+}
+
+/* ============ OPTION 2 — COMMAND DECK ============ */
+function mount2() {
+  const root = document.getElementById("o2");
+  let sel = BOOKS[1].id, filter = null, sortKey = "added", asc = false;
+  const groups = [["Authors", countBy(b => b.a)], ["Series", countBy(b => b.series)], ["Tags", countBy(b => b.tags)], ["Formats", countBy(b => b.fmt)], ["Ratings", countBy(b => b.r ? stars(b.r) : null)], ["Publishers", countBy(b => b.pub)]];
+  const cols = [["r","★","84px"],["t","Title","26%"],["a","Author","16%"],["series","Series","15%"],["y","Year","60px"],["pages","Pages","62px"],["fmt","Formats","14%"],["added","Added","90px"]];
+  const COMMANDS = ["Add books…","Edit metadata","Convert books","View in E-book viewer","Send to device: Kindle Paperwhite","Remove books","Fetch news","Get books","Check library","Download metadata and covers","Polish books","Save to disk","Switch library…","Preferences"];
+  root.innerHTML = `
+  <div class="top">
+    <button class="lib"><i></i>Calibre Library <span class="mono" style="color:var(--mu);font-size:11px">${LIB_TOTAL}</span></button>
+    <button class="tb pri">Add</button><button class="tb">Edit</button><button class="tb">Convert</button><button class="tb">View</button><button class="tb">Send</button><button class="tb">News</button><button class="tb">Remove</button>
+    <button class="cmd" aria-label="Open command palette">Search books or run a command<kbd>⌘K</kbd></button>
+  </div>
+  <div class="body">
+    <nav class="tree" aria-label="Tag browser" data-scroll>${groups.map(([g, items], i) => `<div class="grp ${i < 3 ? "open" : ""}"><button aria-expanded="${i < 3}">${g}<span class="mono" style="margin-left:auto;letter-spacing:0">${items.length}</span></button><ul>${items.map(([k, n]) => `<li><button data-f="${g}|${esc(k)}"><span>${esc(k)}</span><span>${n}</span></button></li>`).join("")}</ul></div>`).join("")}</nav>
+    <div class="tbl" data-scroll><table><colgroup>${cols.map(c => `<col style="width:${c[2]}">`).join("")}</colgroup><thead><tr>${cols.map(c => `<th data-k="${c[0]}">${c[1]}</th>`).join("")}</tr></thead><tbody></tbody></table></div>
+    <aside class="insp" data-scroll></aside>
+  </div>
+  <div class="status"><span class="cnt"></span><span>~/Calibre Library</span><span>metadata: ${srcName().toLowerCase()}</span><span>Kindle PW · USB · 3.2 GB free</span><span class="job">Convert · The Dark Forest → AZW3 <span class="meter"><span></span></span></span></div>
+  <div class="pal-bg"><div class="pal" role="dialog" aria-label="Command palette"><input placeholder="Type a command or a book title…"><ul data-scroll></ul></div></div>`;
+  const tbody = root.querySelector("tbody"), insp = root.querySelector(".insp");
+  const vis = () => {
+    const v = BOOKS.filter(b => !filter || ({Authors: b.a === filter[1], Series: b.series === filter[1], Tags: b.tags.includes(filter[1]), Formats: b.fmt.includes(filter[1]), Ratings: stars(b.r) === filter[1], Publishers: b.pub === filter[1]})[filter[0]]);
+    const key = b => sortKey === "added" ? -b.id : sortKey === "fmt" ? b.fmt.join() : sortKey === "r" ? (b.olr || 0) : (b[sortKey] ?? "");
+    return v.sort((x, y) => { const a = key(x), c = key(y); const d = typeof a === "number" && typeof c === "number" ? a - c : String(a).localeCompare(String(c)); return asc ? d : -d; });
+  };
+  function draw() {
+    const v = vis();
+    tbody.innerHTML = v.map(b => `<tr class="${b.id === sel ? "on" : ""}" data-id="${b.id}"><td class="r" title="${b.olr ? b.olr.toFixed(2) : ""}">${b.r ? stars(b.r) : ""}</td><td>${esc(b.t)}</td><td>${esc(b.a)}</td><td>${b.series ? `${esc(b.series)} [${b.si}]` : ""}</td><td class="n">${yr(b.y)}</td><td class="n">${b.pages || ""}</td><td>${b.fmt.map(f => `<span class="fmt">${f}</span>`).join("")}</td><td class="n">${b.added.slice(0, 6)}</td></tr>`).join("");
+    root.querySelectorAll("th").forEach(th => { th.classList.toggle("sorted", th.dataset.k === sortKey); th.classList.toggle("asc", asc); });
+    root.querySelector(".cnt").textContent = `${v.length} / ${LIB_TOTAL} books${filter ? ` · filter: ${filter[1]}` : ""}`;
+    const b = byId(sel);
+    insp.innerHTML = `<div class="insp-h">${cover(b)}<div><h3>${esc(b.t)}</h3><div class="au">${esc(b.a)}</div></div></div>
+      <dl class="kv"><dt>Series</dt><dd>${b.series ? `${esc(b.series)} #${b.si}` : "—"}</dd><dt>First pub.</dt><dd>${yr(b.y)}</dd><dt>Edition</dt><dd>${esc(b.pub)}, ${b.ed || "—"}</dd><dt>ISBN</dt><dd>${b.isbn || "—"}</dd><dt>Formats</dt><dd>${b.fmt.join(", ")}</dd><dt>Size</dt><dd>${b.size} · ${b.pages || "?"} pp</dd><dt>Rating</dt><dd>${b.olr ? `${b.olr.toFixed(2)} / 5` : "—"}</dd><dt>Tags</dt><dd>${b.tags.join(", ")}</dd><dt>Path</dt><dd>${esc(b.a)}/${esc(b.t)} (${b.id})</dd></dl>
+      <p>${esc(b.d)}</p>
+      <div class="row"><button class="ib pri">Read</button><button class="ib">Convert</button><button class="ib">Send</button></div>`;
+  }
+  tbody.addEventListener("click", e => { const r = e.target.closest("tr"); if (r) { sel = +r.dataset.id; draw(); } });
+  root.querySelector("thead").addEventListener("click", e => { const th = e.target.closest("th"); if (!th) return; if (sortKey === th.dataset.k) asc = !asc; else { sortKey = th.dataset.k; asc = true; } draw(); });
+  root.querySelector(".tree").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.parentElement.classList.contains("grp")) { const g = b.parentElement; g.classList.toggle("open"); b.setAttribute("aria-expanded", g.classList.contains("open")); return; }
+    const f = b.dataset.f.split("|"); filter = filter && filter[1] === f[1] ? null : f;
+    root.querySelectorAll(".tree li button").forEach(x => x.classList.toggle("on", !!filter && x === b));
+    const v = vis(); if (v.length && !v.some(x => x.id === sel)) sel = v[0].id; draw();
+  });
+  const bg = root.querySelector(".pal-bg"), inp = bg.querySelector("input"), ul = bg.querySelector("ul");
+  let hi = 0, items = [];
+  function drawPal() {
+    const q = inp.value.trim().toLowerCase();
+    const cmds = COMMANDS.filter(c => c.toLowerCase().includes(q)).map(c => ({k: "cmd", label: c, hint: "command"}));
+    const bks = BOOKS.filter(b => matches(b, q)).slice(0, q ? 8 : 4).map(b => ({k: "book", id: b.id, label: b.t, hint: b.a}));
+    items = [...cmds.slice(0, q ? 8 : 5), ...bks];
+    hi = Math.min(hi, Math.max(items.length - 1, 0));
+    let html = "", i = 0;
+    const sec = (name, arr) => { if (!arr.length) return; html += `<div class="sec">${name}</div>`; arr.forEach(it => { html += `<li class="${i === hi ? "hi" : ""}" data-i="${i}">${esc(it.label)}<small>${esc(it.hint)}</small></li>`; i++; }); };
+    sec("Commands", items.filter(x => x.k === "cmd")); sec("Books", items.filter(x => x.k === "book"));
+    ul.innerHTML = html || `<li>No matches</li>`;
+  }
+  const openPal = () => { bg.classList.add("open"); inp.value = ""; hi = 0; drawPal(); inp.focus({preventScroll: true}); };
+  const closePal = () => bg.classList.remove("open");
+  const pick = it => { if (it && it.k === "book") { sel = it.id; filter = null; draw(); } closePal(); };
+  root.querySelector(".cmd").addEventListener("click", openPal);
+  bg.addEventListener("click", e => { if (e.target === bg) closePal(); const li = e.target.closest("li[data-i]"); if (li) pick(items[+li.dataset.i]); });
+  inp.addEventListener("input", () => { hi = 0; drawPal(); });
+  inp.addEventListener("keydown", e => {
+    if (e.key === "Escape") closePal();
+    else if (e.key === "ArrowDown") { hi = Math.min(hi + 1, items.length - 1); drawPal(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { hi = Math.max(hi - 1, 0); drawPal(); e.preventDefault(); }
+    else if (e.key === "Enter") pick(items[hi]);
+    e.stopPropagation();
+  });
+  root.openPal = openPal;
+  draw();
+}
+
+/* ============ OPTION 3 — QUEUE (Linear-inspired) ============ */
+const SHELF_COLOR = {"Science Fiction":"#4ea7fc","Fantasy":"#b17ae8","Literary Fiction":"#f2994a","Nonfiction":"#4cb782","Classics":"#eb5757","Mythology":"#f2c94c","History":"#26b5ce","Psychology":"#e86fb0","Memoir":"#95a2b3","Romance":"#f7a8b8","Historical Fiction":"#d4a373"};
+const I = {
+  chev: `<svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  plus: `<svg width="12" height="12" viewBox="0 0 12 12"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  search: `<svg width="14" height="14" viewBox="0 0 14 14"><circle cx="6" cy="6" r="4.2" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m9.2 9.2 3 3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  x: `<svg width="12" height="12" viewBox="0 0 12 12"><path d="m3 3 6 6M9 3 3 9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  check: `<svg width="9" height="9" viewBox="0 0 9 9"><path d="m1.8 4.6 1.8 1.8 3.6-3.8" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  filter: `<svg width="12" height="12" viewBox="0 0 12 12"><path d="M1.5 3h9M3.5 6h5M5 9h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+  display: `<svg width="12" height="12" viewBox="0 0 12 12"><rect x="1.5" y="2" width="9" height="3" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="1.5" y="7" width="9" height="3" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`,
+  book: `<svg width="14" height="14" viewBox="0 0 14 14"><path d="M2.5 2.5h3.5a1.5 1.5 0 0 1 1.5 1.5v7.5a1 1 0 0 0-1-1h-4zM11.5 2.5H8.9A1.4 1.4 0 0 0 7.5 4v7.5a1 1 0 0 1 1-1h3z" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
+};
+const starsHtml = r => r ? "★".repeat(r) + `<i>${"★".repeat(5 - r)}</i>` : `<i>★★★★★</i>`;
+/* Status icons: a bookmark. Outline = not started, fills from the top in quarter steps while reading, green with a check when finished. */
+let iconUid = 0;
+const BOOKMARK = "M4.5 2.25h7v11.5L8 11.1l-3.5 2.65z";
+function statusIcon(st, prog = 0) {
+  const svg = inner => `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  if (st === "finished") return svg(`<path d="${BOOKMARK}" fill="var(--done)" stroke="var(--done)" stroke-width="1.4"/><path d="m6.1 6.4 1.4 1.4 2.5-2.7" stroke="#fff" stroke-width="1.4"/>`);
+  if (st === "reading") {
+    // Three fill steps: under 37.5% read shows a quarter, 37.5–62.5% half, above 62.5% three quarters.
+    const fill = prog < 37.5 ? .25 : prog <= 62.5 ? .5 : .75;
+    const id = "bm" + (++iconUid), h = (8.85 * fill + .25).toFixed(2); // measured against the solid body above the notch (y 2.25–11.1)
+    return svg(`<defs><clipPath id="${id}"><rect x="0" y="2" width="16" height="${h}"/></clipPath></defs><path d="${BOOKMARK}" fill="var(--prog)" clip-path="url(#${id})"/><path d="${BOOKMARK}" stroke="var(--prog)" stroke-width="1.4"/>`);
+  }
+  return svg(`<path d="${BOOKMARK}" stroke="var(--mu)" stroke-width="1.4"/>`);
+}
+function mount3() {
+  const root = document.getElementById("o3");
+  const theme = root.dataset.theme || "dark";
+  let view = "all", shelf = null, q = "", group = "status", focusId = null, picked = new Set(), closed = new Set(), peekId = null, menu = null;
+  const GROUPS = {status: ["Group by status", b => b.st, ["reading", "want", "finished"], k => STATUS[k]],
+                  shelf: ["Group by shelf", b => b.tags[0], null, k => k],
+                  author: ["Group by author", b => b.a, null, k => k]};
+  root.dataset.theme = theme;
+  root.innerHTML = `
+  <aside class="sb">
+    <div class="ws"><svg class="lg" viewBox="0 0 30 30"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg><b>Nightstand</b><span class="ic"><button aria-label="Search" data-act="search">${I.search}</button><button aria-label="Add books">${I.plus}</button></span></div>
+    <button class="nv" data-view="all">${I.book}All books<span class="ct"></span></button>
+    <button class="nv" data-view="reading">${statusIcon("reading", 50)}Reading<span class="ct"></span></button>
+    <button class="nv" data-view="want">${statusIcon("want")}Not started<span class="ct"></span></button>
+    <button class="nv" data-view="finished">${statusIcon("finished")}Finished<span class="ct"></span></button>
+    <div class="sec">Notes</div>
+    <a class="nv" href="notes.html" title="Open Notes"><span class="ul"><i></i></span>All underlines<span class="ct">17</span></a>
+    <div class="sec">Shelves</div>
+    <div class="shelves"></div>
+    <div class="sec">Devices</div>
+    <div class="dev"><span class="led"></span>Kindle Paperwhite<small>3.2 GB free</small></div>
+    <div class="dev"><span class="led off"></span>Kobo Clara 2E<small>offline</small></div>
+    <div class="sb-foot">
+      <div class="job"><svg class="ring" width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="none" stroke="var(--ln2)" stroke-width="1.6"/><path d="M7 1.5A5.5 5.5 0 0 1 12.5 7" fill="none" stroke="var(--ac2)" stroke-width="1.6" stroke-linecap="round"/></svg>Converting The Dark Forest → AZW3</div>
+      <div class="theme" role="group" aria-label="Theme"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div>
+    </div>
+  </aside>
+  <section class="main">
+    <header class="hd">
+      <span class="crumb">Library<span>›</span><b class="vname"></b></span>
+      <div class="tabs" role="tablist"><button data-g="status">Status</button><button data-g="shelf">Shelf</button><button data-g="author">Author</button></div>
+      <div class="rt"><button class="hbtn" data-act="filter">${I.filter}Filter</button><button class="hbtn" data-act="display">${I.display}<b>Display</b></button></div>
+    </header>
+    <div class="fbar"><span class="chips"></span><input class="q" placeholder="Filter by title, author, series or publisher…" aria-label="Filter books"><span class="kh"><span><kbd>J</kbd><kbd>K</kbd>move</span><span><kbd>X</kbd>select</span><span><kbd>S</kbd>status</span><span><kbd>↵</kbd>open</span></span></div>
+    <div class="list" tabindex="0" data-scroll aria-label="Books"></div>
+    <div class="selbar" role="toolbar"><span class="n"></span><button data-bulk="convert">Convert</button><button data-bulk="send">Send to Kindle</button><button data-bulk="status">Set status…</button><button data-bulk="clear" aria-label="Clear selection">${I.x}</button></div>
+    <aside class="peek" aria-label="Book details"></aside>
+  </section>`;
+  const list = root.querySelector(".list"), main = root.querySelector(".main"), peek = root.querySelector(".peek");
+  const visible = () => BOOKS.filter(b => (view === "all" || b.st === view) && (!shelf || b.tags.includes(shelf)) && matches(b, q));
+  function grouped() {
+    const [, key, order, label] = GROUPS[group], v = visible(), m = new Map();
+    (order || [...new Set(v.map(key))].sort()).forEach(k => m.set(k, []));
+    v.forEach(b => { const k = key(b); if (!m.has(k)) m.set(k, []); m.get(k).push(b); });
+    return [...m].filter(([, arr]) => arr.length).map(([k, arr]) => ({k, label: label(k), arr}));
+  }
+  const flat = () => grouped().flatMap(g => closed.has(g.k) ? [] : g.arr);
+  function drawSide() {
+    root.querySelectorAll(".nv[data-view]").forEach(n => { n.classList.toggle("on", n.dataset.view === view && !shelf); n.querySelector(".ct").textContent = n.dataset.view === "all" ? BOOKS.length : BOOKS.filter(b => b.st === n.dataset.view).length; });
+    root.querySelector(".shelves").innerHTML = countBy(b => b.tags).slice(0, 7).map(([k, n]) => `<button class="nv ${shelf === k ? "on" : ""}" data-shelf="${esc(k)}"><span class="dot" style="background:${SHELF_COLOR[k] || "#888"}"></span>${esc(k)}<span class="ct">${n}</span></button>`).join("");
+    root.querySelectorAll(".theme button").forEach(b => b.classList.toggle("on", b.dataset.theme === root.dataset.theme));
+    root.querySelector(".vname").textContent = shelf || (view === "all" ? "All books" : STATUS[view]);
+    root.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.g === group));
+    const chips = [];
+    if (shelf) chips.push(`<span class="chip"><span>Shelf is</span><span>${esc(shelf)}</span><button data-clear="shelf" aria-label="Remove filter">${I.x}</button></span>`);
+    if (view !== "all") chips.push(`<span class="chip"><span>Status is</span><span>${STATUS[view]}</span><button data-clear="view" aria-label="Remove filter">${I.x}</button></span>`);
+    root.querySelector(".chips").innerHTML = chips.join("");
+  }
+  const row = b => `<div class="row ${b.id === focusId ? "focus" : ""} ${picked.has(b.id) ? "picked" : ""}" data-id="${b.id}">
+      <span class="cb">${picked.has(b.id) ? I.check : ""}</span>
+      <button class="st" data-st="${b.id}" aria-label="Status: ${STATUS[b.st]}">${statusIcon(b.st, b.prog)}</button>
+      ${cover(b)}
+      <span class="tt">${esc(b.t)}</span><span class="au">${esc(b.a)}</span>
+      <span class="sp"></span>
+      ${b.series ? `<span class="ser">${I.book}${esc(b.series)} · ${b.si}</span>` : ""}
+      ${b.tags.slice(0, 2).map(t => `<span class="lb"><i style="background:${SHELF_COLOR[t] || "#888"}"></i>${esc(t)}</span>`).join("")}
+      <span class="fm">${b.fmt.join(" · ")}</span>
+      <span class="rt2 stars" title="${b.olr ? b.olr.toFixed(2) + " average on " + srcName() : "No rating"}">${starsHtml(b.r)}</span>
+      <span class="dt">${b.addedShort}</span>
+    </div>`;
+  function drawList() {
+    const gs = grouped();
+    if (!flat().some(b => b.id === focusId)) focusId = flat()[0]?.id ?? null;
+    list.innerHTML = gs.map(g => `<div class="gh ${closed.has(g.k) ? "closed" : ""}" data-g="${esc(g.k)}"><span class="chev">${I.chev}</span>${group === "status" ? statusIcon(g.k, 50) : group === "shelf" ? `<span class="dot" style="width:9px;height:9px;border-radius:50%;background:${SHELF_COLOR[g.k] || "#888"}"></span>` : ""}${esc(g.label)}<span class="cn">${g.arr.length}</span><button class="plus" aria-label="Add to ${esc(g.label)}">${I.plus}</button></div>${closed.has(g.k) ? "" : g.arr.map(row).join("")}`).join("")
+      || `<div style="padding:40px;color:var(--mu);text-align:center">No books match this view.</div>`;
+    const sb = root.querySelector(".selbar"); sb.classList.toggle("on", picked.size > 0); root.classList.toggle("selecting", picked.size > 0);
+    sb.querySelector(".n").textContent = `${picked.size} selected`;
+  }
+  const draw = () => { drawSide(); drawList(); };
+  function openPeek(id) {
+    const b = byId(id); peekId = id;
+    const ev = [[`Added to library from ~/Downloads/${b.t.replace(/[^\w]+/g, "_")}.${b.fmt[0].toLowerCase()}`, b.addedShort],
+      [`Metadata and cover downloaded from ${srcName()}`, b.addedShort]];
+    if (b.fmt.includes("AZW3")) ev.push([`Converted ${b.fmt[0]} → AZW3`, b.addedShort]);
+    if (b.st !== "want") ev.push(["Sent to <b>Kindle Paperwhite</b>", b.addedShort]);
+    if (b.st === "reading") ev.push([`Reading progress synced: <b>${b.prog}%</b>`, "2h ago"]);
+    if (b.st === "finished") ev.push(["Marked <b>Finished</b>", "Oct 2026"]);
+    if (b.opened) ev.push(["Opened in the reader, so it moved to <b>Reading</b>", "Just now"]);
+    peek.innerHTML = `<div class="pk-h"><span>Library</span>›<b>${esc(b.t)}</b><button class="x" aria-label="Close">${I.x}</button></div>
+      <div class="pk-b"><div class="pk-main" data-scroll>
+        <h2>${esc(b.t)}</h2><div class="sub">${b.sub ? esc(b.sub) + " · " : ""}${esc(b.a)}</div>
+        <p>${esc(b.d)}</p>
+        <div class="pk-acts"><button class="pri" data-read="${b.id}">${b.st === "reading" ? `Resume at ${b.prog}%` : b.st === "want" ? "Start reading" : "Read again"}</button><button>Convert…</button><button>Send to Kindle</button><button>Edit metadata</button></div>
+        <div class="act"><h4>Activity</h4>${ev.map(([t, d]) => `<div class="ev"><span class="e-dot"><i></i></span><span>${t}<time>${d}</time></span></div>`).join("")}</div>
+      </div>
+      <dl class="pk-side" data-scroll>${cover(b)}
+        <div class="pr"><dt>Status</dt><dd><button class="stbtn" data-st="${b.id}">${statusIcon(b.st, b.prog)}${STATUS[b.st]}${b.st === "reading" ? ` · ${b.prog}%` : ""}</button></dd></div>
+        <div class="pr"><dt>Rating</dt><dd>${b.olr ? `<span class="stars">${starsHtml(b.r)}</span>${b.olr.toFixed(1)} on ${srcName()}` : "—"}</dd></div>
+        <div class="pr"><dt>Author</dt><dd>${esc(b.a)}</dd></div>
+        ${b.series ? `<div class="pr"><dt>Series</dt><dd>${esc(b.series)} #${b.si}</dd></div>` : ""}
+        <div class="pr"><dt>Shelves</dt><dd>${b.tags.map(t => `<span class="lb"><i style="background:${SHELF_COLOR[t] || "#888"}"></i>${esc(t)}</span>`).join("")}</dd></div>
+        <div class="pr"><dt>Formats</dt><dd>${b.fmt.join(", ")}</dd></div>
+        <div class="pr"><dt>Pages</dt><dd>${b.pages || "—"}</dd></div>
+        <div class="pr"><dt>First pub.</dt><dd>${yr(b.y)}</dd></div>
+        <div class="pr"><dt>Edition</dt><dd>${esc(b.pub)}${b.ed ? `, ${b.ed}` : ""}</dd></div>
+        <div class="pr"><dt>ISBN</dt><dd>${b.isbn || "—"}</dd></div>
+        <div class="pr"><dt>Source</dt><dd>${b.olid ? `<a href="https://openlibrary.org${b.olid}" target="_blank" rel="noopener">Open Library ↗</a>` : ""}${SOURCE === "google" ? " · Google Books" : ""}</dd></div>
+      </dl></div>`;
+    peek.classList.add("open");
+  }
+  const closePeek = () => { peek.classList.remove("open"); peekId = null; list.focus({preventScroll: true}); };
+  function closeMenu() { menu?.remove(); menu = null; }
+  function openMenu(anchor, items, title) {
+    closeMenu();
+    const mr = main.getBoundingClientRect(), ar = anchor.getBoundingClientRect(), sc = mr.width / main.offsetWidth;
+    menu = document.createElement("div"); menu.className = "menu";
+    menu.innerHTML = (title ? `<div class="mh">${title}</div>` : "") + items.map((it, i) => it === "-" ? "<hr>" : `<button data-i="${i}">${it.icon || ""}${it.label}${it.kbd ? `<kbd>${it.kbd}</kbd>` : ""}</button>`).join("");
+    menu.style.left = Math.min((ar.left - mr.left) / sc, main.offsetWidth - 230) + "px";
+    menu.style.top = ((ar.bottom - mr.top) / sc + 4) + "px";
+    main.appendChild(menu);
+    menu.addEventListener("click", e => { const b = e.target.closest("button[data-i]"); if (b) { items[+b.dataset.i].run(); closeMenu(); } });
+    menu.querySelector("button")?.focus({preventScroll: true});
+  }
+  function setStatus(ids, st) {
+    ids.forEach(id => { const b = byId(id); b.st = st; b.prog = st === "finished" ? 100 : st === "reading" ? Math.max(b.prog % 100, 1) : 0; LOCAL[b.t] = [b.st, b.prog, b.fmt]; });
+    draw(); ids.forEach(id => list.querySelector(`.row[data-id="${id}"]`)?.classList.add("moved"));
+    if (peekId && ids.includes(peekId)) openPeek(peekId);
+  }
+  const statusMenu = (anchor, ids) => openMenu(anchor, ["reading", "want", "finished"].map((st, i) => ({label: STATUS[st], icon: statusIcon(st, 50), kbd: String(i + 1), run: () => setStatus(ids, st)})), ids.length > 1 ? `Set status for ${ids.length} books` : "Change status");
+  function moveFocus(d) {
+    const f = flat(); if (!f.length) return;
+    const i = Math.max(0, Math.min(f.length - 1, f.findIndex(b => b.id === focusId) + d));
+    focusId = f[i].id; drawList();
+    list.querySelector(".row.focus")?.scrollIntoView({block: "nearest"});
+    if (peekId) openPeek(focusId);
+  }
+  root.querySelector(".sb").addEventListener("click", e => {
+    const n = e.target.closest("[data-view]"), s = e.target.closest("[data-shelf]"), t = e.target.closest("[data-theme]");
+    if (t) { root.dataset.theme = t.dataset.theme; drawSide(); return; }
+    if (e.target.closest('[data-act="search"]')) { root.querySelector(".q").focus(); return; }
+    if (n) { view = n.dataset.view; shelf = null; } else if (s) { shelf = shelf === s.dataset.shelf ? null : s.dataset.shelf; } else return;
+    draw();
+  });
+  root.querySelector(".hd").addEventListener("click", e => {
+    const g = e.target.closest("[data-g]"); if (g) { group = g.dataset.g; closed.clear(); draw(); return; }
+    const a = e.target.closest("[data-act]"); if (!a) return;
+    if (a.dataset.act === "display") openMenu(a, Object.entries(GROUPS).map(([k, [label]]) => ({label: (group === k ? "✓ " : "") + label, run: () => { group = k; closed.clear(); draw(); }})), "Display");
+    if (a.dataset.act === "filter") openMenu(a, [...countBy(b => b.tags).slice(0, 6).map(([k]) => ({label: `Shelf: ${k}`, icon: `<span style="width:8px;height:8px;border-radius:50%;background:${SHELF_COLOR[k]}"></span>`, run: () => { shelf = k; draw(); }})), "-",
+      ...["reading", "want", "finished"].map(st => ({label: `Status: ${STATUS[st]}`, icon: statusIcon(st, 50), run: () => { view = st; draw(); }}))], "Add filter");
+  });
+  root.querySelector(".fbar").addEventListener("click", e => { const c = e.target.closest("[data-clear]"); if (!c) return; if (c.dataset.clear === "shelf") shelf = null; else view = "all"; draw(); });
+  root.querySelector(".q").addEventListener("input", e => { q = e.target.value; drawList(); });
+  root.querySelector(".q").addEventListener("keydown", e => { if (e.key === "Escape" || e.key === "Enter" || e.key === "ArrowDown") { e.preventDefault(); list.focus({preventScroll: true}); } e.stopPropagation(); });
+  list.addEventListener("click", e => {
+    const st = e.target.closest(".st"); if (st) { focusId = +st.dataset.st; drawList(); statusMenu(list.querySelector(`.row[data-id="${focusId}"] .st`), [focusId]); return; }
+    const gh = e.target.closest(".gh"); if (gh && !e.target.closest(".plus")) { closed.has(gh.dataset.g) ? closed.delete(gh.dataset.g) : closed.add(gh.dataset.g); drawList(); return; }
+    const r = e.target.closest(".row"); if (!r) return; const id = +r.dataset.id;
+    if (e.target.closest(".cb") || e.metaKey || e.ctrlKey) { picked.has(id) ? picked.delete(id) : picked.add(id); focusId = id; drawList(); return; }
+    focusId = id; drawList(); openPeek(id);
+  });
+  peek.addEventListener("click", e => {
+    if (e.target.closest(".x")) return closePeek();
+    const st = e.target.closest(".stbtn"); if (st) statusMenu(st, [+st.dataset.st]);
+    // Opening a Not started book in the reader moves it to Reading. Finished books keep their status.
+    const rd = e.target.closest("[data-read]");
+    if (rd) { const b = byId(+rd.dataset.read); if (b.st === "want") { b.opened = true; setStatus([b.id], "reading"); } }
+  });
+  root.querySelector(".selbar").addEventListener("click", e => {
+    const b = e.target.closest("[data-bulk]"); if (!b) return;
+    if (b.dataset.bulk === "clear") { picked.clear(); drawList(); }
+    if (b.dataset.bulk === "status") statusMenu(b, [...picked]);
+    if (b.dataset.bulk === "convert" || b.dataset.bulk === "send") {
+      const n = picked.size; b.textContent = b.dataset.bulk === "convert" ? `Converting ${n}…` : `Sending ${n}…`;
+      setTimeout(() => { b.textContent = b.dataset.bulk === "convert" ? "Convert" : "Send to Kindle"; picked.clear(); drawList(); }, 1100);
+    }
+  });
+  root.onkeydown = e => {
+    if (e.target.matches("input")) return;
+    e.stopPropagation();
+    const k = e.key.toLowerCase();
+    if (menu) {
+      const btns = [...menu.querySelectorAll("button[data-i]")], i = btns.indexOf(document.activeElement);
+      if (k === "escape") { closeMenu(); list.focus({preventScroll: true}); }
+      else if (k === "arrowdown" || k === "j") btns[(i + 1) % btns.length].focus();
+      else if (k === "arrowup" || k === "k") btns[(i - 1 + btns.length) % btns.length].focus();
+      else if (/^[1-3]$/.test(k) && btns[+k - 1]) btns[+k - 1].click();
+      else return;
+      e.preventDefault(); return;
+    }
+    if (k === "j" || k === "arrowdown") moveFocus(1);
+    else if (k === "k" || k === "arrowup") moveFocus(-1);
+    else if (k === "x" && focusId) { picked.has(focusId) ? picked.delete(focusId) : picked.add(focusId); drawList(); }
+    else if (k === "s" && focusId) { const ids = picked.size ? [...picked] : [focusId]; statusMenu(list.querySelector(".row.focus .st") || list, ids); }
+    else if ((k === "enter" || k === " ") && focusId) openPeek(focusId);
+    else if (k === "escape") { if (peekId) closePeek(); else if (picked.size) { picked.clear(); drawList(); } }
+    else if (k === "/") root.querySelector(".q").focus();
+    else return;
+    e.preventDefault();
+  };
+  window.__o3close = e => { if (menu && !menu.contains(e.target) && !e.target.closest("[data-act],.st,.stbtn,[data-bulk]")) closeMenu(); };
+  draw();
+}
+document.addEventListener("pointerdown", e => window.__o3close && window.__o3close(e));
+
+function mountAll() { drawIntro(); mount1(); mount2(); mount3(); }
+mountAll();
+
+/* ============ LIVE GOOGLE BOOKS (Open Library is the fallback) ============ */
+const srcEl = document.getElementById("src");
+function setSource(text, live) { srcEl.innerHTML = `<i></i>${text}`; srcEl.classList.toggle("live", live); }
+const stripHtml = s => (s || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+const trimDesc = s => { let out = ""; for (const p of s.split(/(?<=[.!?])\s+/)) { if (out && out.length + p.length > 340) break; out += (out ? " " : "") + p; } return out; };
+async function loadGoogle() {
+  const key = localStorage.getItem("gbooks-key") || "";
+  setSource("Google Books…", false);
+  try {
+    const infos = await Promise.all(OPEN_LIBRARY.map(async b => {
+      if (!b.isbn) return null;
+      const r = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${b.isbn}${key ? `&key=${encodeURIComponent(key)}` : ""}`);
+      const j = await r.json();
+      if (j.error) throw new Error(j.error.message);
+      return j.items?.[0]?.volumeInfo || null;
+    }));
+    if (!infos.some(Boolean)) throw new Error("no matches");
+    const merged = OPEN_LIBRARY.map((b, i) => {
+      const v = infos[i]; if (!v) return b;
+      const g = {...b};
+      if (v.subtitle) g.sub = v.subtitle;
+      if (v.authors?.length) { g.a = v.authors[0]; g.sk = g.a.split(" ").pop(); }
+      if (v.publisher) g.pub = v.publisher.replace(/^"|"$/g, "");
+      if (v.publishedDate) g.ed = v.publishedDate.slice(0, 4);
+      if (v.pageCount) g.pages = v.pageCount;
+      if (v.description) g.d = trimDesc(stripHtml(v.description));
+      if (v.averageRating) g.olr = v.averageRating;
+      if (!g.cover && v.imageLinks?.thumbnail) g.cover = v.imageLinks.thumbnail.replace("http://", "https://");
+      return g;
+    });
+    SOURCE = "google"; buildBooks(merged); mountAll();
+    setSource(`Google Books · ${infos.filter(Boolean).length}/${infos.length} live`, true);
+  } catch (err) {
+    SOURCE = "openlibrary";
+    setSource("Open Library (Google Books unavailable)", false);
+    srcEl.title = "Google Books: " + err.message;
+    console.info("Google Books unavailable, showing the Open Library snapshot:", err.message);
+  }
+}
+document.getElementById("gkey").addEventListener("click", () => {
+  const cur = localStorage.getItem("gbooks-key") || "";
+  const k = prompt("Google Books API key (kept only in this browser's localStorage). Leave empty to clear.", cur);
+  if (k === null) return;
+  k.trim() ? localStorage.setItem("gbooks-key", k.trim()) : localStorage.removeItem("gbooks-key");
+  loadGoogle();
+});
+loadGoogle();
+
+/* ============ CANVAS PAN / ZOOM ============ */
+const vp = document.getElementById("viewport");
+let tx = 0, ty = 0, s = 0.3;
+const apply = () => { world.style.transform = `translate(${tx}px,${ty}px) scale(${s})`; document.getElementById("zoomPct").textContent = Math.round(s * 100) + "%"; };
+const zoomAt = (ns, cx, cy) => { ns = Math.max(0.08, Math.min(2, ns)); tx = cx - (cx - tx) * ns / s; ty = cy - (cy - ty) * ns / s; s = ns; apply(); };
+function fit(x, y, w, h, pad = 40) {
+  const vw = innerWidth, vh = innerHeight - 70;
+  s = Math.min((vw - pad * 2) / w, (vh - pad * 2) / h);
+  tx = (vw - w * s) / 2 - x * s; ty = (vh - h * s) / 2 - y * s + 10; world.style.transition = "transform .45s cubic-bezier(.3,.8,.2,1)"; apply();
+  setTimeout(() => world.style.transition = "", 480);
+}
+const fitAll = () => fit(0, 0, GX + W, GY + 150 + H + 80, 30);
+const go = i => i === "all" ? fitAll() : fit(POS[i][0], POS[i][1] + 150, W, H, 24);
+let drag = null;
+vp.addEventListener("pointerdown", e => {
+  if (e.target.closest(".screen, #hud, [data-go]")) return;
+  drag = {x: e.clientX - tx, y: e.clientY - ty}; vp.classList.add("dragging"); vp.setPointerCapture(e.pointerId);
+});
+vp.addEventListener("pointermove", e => { if (!drag) return; tx = e.clientX - drag.x; ty = e.clientY - drag.y; apply(); });
+vp.addEventListener("pointerup", () => { drag = null; vp.classList.remove("dragging"); });
+vp.addEventListener("wheel", e => {
+  if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomAt(s * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY); return; }
+  const sc = e.target.closest("[data-scroll]");
+  if (sc && s > 0.45) {
+    const canY = sc.scrollHeight > sc.clientHeight, canX = sc.scrollWidth > sc.clientWidth;
+    if ((canY && Math.abs(e.deltaY) > Math.abs(e.deltaX)) || (canX && Math.abs(e.deltaX) > Math.abs(e.deltaY))) return;
+  }
+  e.preventDefault(); tx -= e.deltaX; ty -= e.deltaY; apply();
+}, {passive: false});
+document.addEventListener("click", e => { const g = e.target.closest("[data-go]"); if (g) go(g.dataset.go); const z = e.target.closest("[data-z]"); if (z) zoomAt(s * (z.dataset.z > 0 ? 1.25 : 0.8), innerWidth / 2, innerHeight / 2); });
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); go(2); setTimeout(() => document.getElementById("o2").openPal(), 460); return; }
+  if (e.target.matches("input,textarea,select") || e.target.closest(".screen")) return;
+  if (/^[1-3]$/.test(e.key)) go(+e.key);
+  if (e.key === "0") fitAll();
+});
+addEventListener("resize", fitAll);
+[vp, document.scrollingElement].forEach(el => el && el.addEventListener("scroll", () => { el.scrollTop = 0; el.scrollLeft = 0; }));
+addEventListener("scroll", () => scrollTo(0, 0));
+fitAll();
+</script>
+</body>
+</html>

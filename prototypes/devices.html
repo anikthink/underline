@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightstand · Devices</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:ital,opsz,wght@0,7..72,400;1,7..72,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#e7e5e0;color:#1b1c1f;font:14px/1.5 "Inter",sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
+body{padding:56px 0 96px}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+
+/* canvas shell */
+.intro{width:1280px;margin:0 auto 40px;display:grid;grid-template-columns:1fr 380px;gap:64px;align-items:end;transform-origin:top left}
+.intro h1{font:600 30px/1.15 "Inter";letter-spacing:-.02em;display:flex;align-items:center;gap:12px}
+.intro h1 .lg{width:30px;height:30px}
+.intro h1 span{color:#8a8780;font-weight:500}
+.intro p{color:#4c4a45;max-width:640px;margin-top:12px;font-size:15px}
+.intro dl{font-size:12.5px;color:#4c4a45;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.intro dt{color:#8a8780}
+.kb{font:500 10.5px "Inter";color:#8a8780;border:1px solid #cfccc5;border-radius:4px;padding:0 4px;line-height:15px}
+.frame{width:1280px;margin:0 auto 64px;transform-origin:top left}
+.frame>header{display:flex;align-items:baseline;gap:14px;margin-bottom:14px}
+.frame>header b{font:600 13px "Inter";color:#1b1c1f;white-space:nowrap}
+.frame>header .n{font:500 12px "Inter";color:#8a8780;font-variant-numeric:tabular-nums}
+.frame>header p{color:#5c5a54;font-size:13px}
+.win{width:1280px;height:800px;border-radius:12px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.09),0 30px 70px -20px rgba(30,25,15,.35),0 8px 20px -10px rgba(30,25,15,.2);position:relative}
+.qs{width:1280px;margin:0 auto 40px;border-top:1px solid #d3d0c9;padding-top:28px;display:grid;grid-template-columns:240px 1fr;gap:64px}
+.qs h2{font:600 15px "Inter"}
+.qs ol{padding-left:18px;color:#3c3a36;display:grid;gap:10px;max-width:760px}
+.qs li::marker{color:#8a8780;font-variant-numeric:tabular-nums}
+.qs li b{font-weight:600}
+
+/* app tokens (library option 3) */
+.app{--out:#08090a;--panel:#101113;--raise:#17181b;--pop:#1c1d21;--ln:rgba(255,255,255,.07);--ln2:rgba(255,255,255,.11);
+  --tx:#ecedee;--tx2:#c9cbcf;--mu:#8a8f98;--fa:#62666d;--hv:rgba(255,255,255,.035);--sel:rgba(255,255,255,.06);
+  --ac:#5e6ad2;--ac2:#7c85e0;--prog:#f2c94c;--done:#4cb782;--star:#f2c94c;--shadow:0 16px 48px rgba(0,0,0,.55);--side:-24px 0 60px -20px rgba(0,0,0,.7);
+  position:absolute;inset:0;background:var(--out);color:var(--tx);font:13px/1.45 "Inter",sans-serif;display:grid;grid-template-columns:232px 1fr;outline:none}
+.app[data-theme=light]{--out:#f4f5f8;--panel:#fff;--raise:#f7f8fa;--pop:#fff;--ln:#e8e9ed;--ln2:#dcdde2;--tx:#1b1c1f;--tx2:#3c3f44;--mu:#6b6f76;--fa:#9a9ea6;
+  --hv:rgba(0,0,0,.025);--sel:rgba(94,106,210,.07);--done:#2f9e63;--prog:#d9a400;--star:#e0a800;--shadow:0 16px 48px rgba(20,20,40,.16);--side:-24px 0 50px -24px rgba(20,20,40,.25)}
+.app svg{display:block;flex:none}
+.app :focus-visible{outline:2px solid var(--ac);outline-offset:-1px;border-radius:5px}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+
+/* sidebar */
+.sb{display:flex;flex-direction:column;padding:10px 8px;gap:2px;min-height:0}
+.lights{display:flex;gap:8px;padding:4px 8px 12px}
+.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57}
+.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.ws{display:flex;align-items:center;gap:8px;padding:6px 4px 6px 8px;margin-bottom:6px}
+.ws .lg{width:20px;height:20px}
+.ws b{font-weight:600;font-size:13px}
+.ws .add{margin-left:auto;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--mu)}
+.nv{display:flex;align-items:center;gap:9px;width:100%;padding:5px 8px;border-radius:6px;color:var(--tx2);text-align:left;font-weight:500}
+.nv:hover{background:var(--hv)}
+.nv.on{background:var(--sel);color:var(--tx)}
+.nv .ct{margin-left:auto;color:var(--fa);font-size:12px;font-weight:400;font-variant-numeric:tabular-nums}
+.nv .dot{width:9px;height:9px;border-radius:50%;margin:0 2.5px}
+.nv .ul{width:14px;display:grid;place-items:center}
+.nv .ul i{width:12px;height:2px;border-radius:1px;background:var(--tx2)}
+.sec{padding:16px 8px 4px;font-size:11.5px;font-weight:500;color:var(--fa)}
+.sb-foot{margin-top:auto}
+.theme{display:flex;gap:2px;padding:3px;background:var(--hv);border-radius:7px;margin:0 8px 8px}
+.theme button{flex:1;padding:3px 0;border-radius:5px;font-size:12px;color:var(--mu)}
+.theme button.on{background:var(--panel);color:var(--tx);box-shadow:0 0 0 1px var(--ln)}
+
+/* main + library list */
+.main{margin:8px 8px 8px 0;background:var(--panel);border:1px solid var(--ln);border-radius:9px;display:grid;grid-template-rows:44px 1fr;min-height:0;overflow:hidden;position:relative}
+.hd{display:flex;align-items:center;gap:10px;padding:0 14px 0 18px;border-bottom:1px solid var(--ln)}
+.hd .crumb{font-weight:500;color:var(--tx);white-space:nowrap}
+.hd .crumb small{color:var(--fa);font-weight:400;margin-left:8px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.hbtn{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:6px;border:1px solid var(--ln2);color:var(--tx2);font-weight:500;font-size:12px;white-space:nowrap}
+.hbtn:hover{background:var(--hv);color:var(--tx)}
+.pbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:6px;background:var(--ac);color:#fff;font-weight:500;font-size:12px;white-space:nowrap}
+.pbtn:hover{background:var(--ac2)}
+.pbtn:disabled{opacity:.4;cursor:default;background:var(--ac)}
+.ib{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;color:var(--mu)}
+.ib:hover{background:var(--hv);color:var(--tx)}
+.ib:disabled{opacity:.35;cursor:default;background:none}
+.list{overflow:auto;outline:none;position:relative;scrollbar-width:thin;scrollbar-color:var(--ln2) transparent;min-height:0}
+.gh{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;height:36px;padding:0 14px 0 18px;background:var(--raise);border-bottom:1px solid var(--ln);font-weight:500;color:var(--tx)}
+.gh .cn{color:var(--fa);font-weight:400}
+.row{display:flex;align-items:center;gap:10px;height:40px;padding:0 14px 0 14px;border-bottom:1px solid var(--ln);position:relative;cursor:default}
+.row:hover{background:var(--hv)}
+.row.focus{background:var(--sel)}
+.row.focus::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--ac)}
+.row.picked{background:color-mix(in srgb,var(--ac) 13%,transparent)}
+.row .cb{width:14px;height:14px;border-radius:4px;border:1px solid var(--ln2);display:grid;place-items:center;flex:none;color:#fff}
+.row.picked .cb{background:var(--ac);border-color:var(--ac)}
+.row .cv{width:18px;height:26px;border-radius:2px;flex:none;box-shadow:0 0 0 1px var(--ln);object-fit:cover}
+.row .tt{font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:0 1 auto}
+.row .au{color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 10 auto;min-width:0}
+.row .sp{flex:1 1 0;min-width:8px}
+.row .lb{display:flex;align-items:center;gap:6px;border:1px solid var(--ln2);border-radius:999px;padding:1px 8px 1px 7px;font-size:11.5px;color:var(--tx2);white-space:nowrap;flex:none}
+.row .lb i{width:7px;height:7px;border-radius:50%}
+.row .fm{font-size:11px;color:var(--fa);width:112px;white-space:nowrap;text-align:right;flex:none;letter-spacing:.02em}
+.row .new{font-size:11px;font-weight:500;color:var(--ac2);border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);background:color-mix(in srgb,var(--ac) 12%,transparent);border-radius:999px;padding:0 7px;line-height:18px;flex:none}
+.row.flash{animation:flash 1.2s ease-out}
+@keyframes flash{from{background:color-mix(in srgb,var(--ac) 22%,transparent)}}
+.toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%) translateY(8px);background:var(--pop);color:var(--tx);border:1px solid var(--ln2);box-shadow:var(--shadow);padding:7px 12px;border-radius:8px;font-size:12px;z-index:90;opacity:0;transition:.18s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.toast kbd,.kh kbd{font:500 10.5px "Inter";border:1px solid var(--ln2);border-radius:4px;padding:0 4px;color:var(--mu);background:var(--raise);margin-left:6px}
+/* dialogs */
+.scrim{position:absolute;inset:0;z-index:60;display:grid;place-items:center;background:rgba(0,0,0,.5);animation:fade .15s ease-out}
+.app[data-theme=light] .scrim{background:rgba(20,22,40,.2)}
+@keyframes fade{from{opacity:0}}
+.dlg{background:var(--pop);border:1px solid var(--ln2);border-radius:12px;box-shadow:var(--shadow);display:grid;grid-template-rows:auto 1fr auto;overflow:hidden;animation:pop .16s ease-out;max-height:700px}
+@keyframes pop{from{opacity:0;transform:translateY(-4px) scale(.985)}}
+.dlg .dh{padding:16px 16px 12px 20px;display:flex;align-items:flex-start;gap:12px;border-bottom:1px solid var(--ln)}
+.dlg .dh h3{font-size:14px;font-weight:600}
+.dlg .dh p{color:var(--mu);font-size:12.5px;margin-top:2px}
+.dlg .dh .ib{margin-left:auto}
+.dlg .df{display:flex;align-items:center;gap:8px;padding:12px 16px 12px 20px;border-top:1px solid var(--ln);color:var(--fa);font-size:12px}
+.dlg .df .sp{margin-right:auto}
+.ck{width:15px;height:15px;border-radius:4px;border:1px solid var(--ln2);display:grid;place-items:center;color:transparent;background:var(--panel);margin-top:1px}
+.ck.on{background:var(--ac);border-color:var(--ac);color:#fff}
+.ck:disabled{opacity:.3}
+
+/* devices in the sidebar */
+.dv{display:flex;align-items:center;gap:9px;width:100%;padding:5px 8px;border-radius:6px;color:var(--tx2);text-align:left;font-weight:500}
+.dv:hover{background:var(--hv)}
+.dv.on{background:var(--sel);color:var(--tx)}
+.dv .led{width:7px;height:7px;border-radius:50%;background:var(--done);margin:0 3.5px;flex:none}
+.dv .led.off{background:none;box-shadow:inset 0 0 0 1.4px var(--fa)}
+.dv small{margin-left:auto;color:var(--fa);font-size:11.5px;font-weight:400;white-space:nowrap}
+.job{display:grid;gap:6px;margin:0 8px 10px;padding:9px 10px;border:1px solid var(--ln);border-radius:8px;background:var(--raise);font-size:12px;color:var(--tx2)}
+.job .jt{display:flex;align-items:center;gap:7px;font-weight:500}
+.job small{color:var(--fa);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:4px;border-radius:2px;background:var(--ln2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ac);transition:width .35s}
+
+/* library extras */
+.hd .rt{margin-left:auto;display:flex;gap:8px;align-items:center}
+.row .ond{display:flex;gap:3px;color:var(--fa);flex:none;width:34px;justify-content:flex-end}
+.row .ond span{display:grid;place-items:center}
+
+/* device page */
+.dp{overflow:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--ln2) transparent}
+.dsum{display:grid;grid-template-columns:64px 1fr;gap:18px;align-items:center;padding:20px 22px 18px}
+.dsum h2{font-size:17px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+.dsum .pill{font-size:11.5px;font-weight:500;border-radius:999px;padding:0 8px;line-height:20px;color:var(--done);background:color-mix(in srgb,var(--done) 14%,transparent)}
+.dsum .pill.off{color:var(--mu);background:var(--hv);box-shadow:inset 0 0 0 1px var(--ln2)}
+.dsum .sub{color:var(--mu);font-size:12.5px;margin-top:2px}
+.stor{margin-top:12px;display:grid;gap:7px;max-width:560px}
+.sbar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--ln2);gap:2px}
+.sbar i{display:block;min-width:3px}
+.slg{display:flex;gap:16px;font-size:11.5px;color:var(--mu);font-variant-numeric:tabular-nums}
+.slg span{display:flex;align-items:center;gap:6px}
+.slg i{width:8px;height:8px;border-radius:2px}
+.banner{margin:0 22px 16px;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 12px;border:1px solid var(--ln2);border-radius:9px;background:var(--raise)}
+.banner .bi{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--prog) 16%,transparent);color:var(--prog)}
+.banner .bi.q{background:color-mix(in srgb,var(--ac) 16%,transparent);color:var(--ac2)}
+.banner b{font-weight:500}
+.banner p{color:var(--mu);font-size:12px}
+.banner>div{flex:1}
+.dp .gh{position:static;border-top:1px solid var(--ln)}
+.row .dst{font-size:12px;color:var(--fa);white-space:nowrap;flex:none}
+.row .dst.warn{color:var(--prog)}
+.row .dst.ok{color:var(--done)}
+.row .pc{font-size:12px;color:var(--mu);width:44px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.row .mb{font-size:11.5px;color:var(--fa);width:56px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.rb{font-size:12px;padding:2px 9px;border:1px solid var(--ln2);border-radius:6px;color:var(--tx2);font-weight:500;white-space:nowrap;flex:none}
+.rb:hover{background:var(--hv);color:var(--tx)}
+.row .rm{opacity:0;width:24px;height:24px}
+.row:hover .rm{opacity:1}
+.row.dim .tt,.row.dim .cv{opacity:.6}
+.foot{padding:10px 22px;font-size:12px;color:var(--fa);border-top:1px solid var(--ln)}
+.prefs{margin:6px 22px 24px;border:1px solid var(--ln);border-radius:9px}
+.prefs h4{font-size:12px;font-weight:500;color:var(--mu);padding:10px 14px 0}
+.pr{display:flex;align-items:center;gap:14px;padding:10px 14px;border-bottom:1px solid var(--ln)}
+.pr:last-child{border:0}
+.pr>div:first-child{flex:1}
+.pr b{font-weight:500}
+.pr p{font-size:12px;color:var(--mu)}
+.sw{width:30px;height:18px;border-radius:9px;background:var(--ln2);position:relative;flex:none;transition:.15s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.sw.on{background:var(--ac)}
+.sw.on::after{left:14px}
+.seg{flex:none;display:flex;padding:2px;gap:2px;background:var(--hv);border-radius:7px;box-shadow:inset 0 0 0 1px var(--ln)}
+.seg button{padding:2px 10px;font-size:12px;color:var(--mu);border-radius:5px;white-space:nowrap}
+.seg button.on{background:var(--panel);color:var(--tx);box-shadow:0 0 0 1px var(--ln2)}
+
+/* send dialog */
+.to{display:flex;align-items:center;gap:10px;padding:12px 20px;border-bottom:1px solid var(--ln);font-size:12.5px;color:var(--mu)}
+.to .seg button{display:flex;align-items:center;gap:6px}
+.to .led{width:6px;height:6px;border-radius:50%;background:var(--done)}
+.to .led.off{background:none;box-shadow:inset 0 0 0 1.3px var(--fa)}
+.sl{overflow:auto}
+.sr{display:grid;grid-template-columns:30px 1fr auto;gap:3px 14px;padding:11px 20px;border-bottom:1px solid var(--ln);align-items:center}
+.sr img{grid-row:1/3;width:30px;height:45px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px var(--ln)}
+.sr b{font-weight:500;color:var(--tx)}
+.sr b span{color:var(--mu);font-weight:400;margin-left:6px}
+.sr .plan{font-size:12px;color:var(--mu);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sr em{grid-row:1/3;grid-column:3;font-style:normal;color:var(--fa);font-size:12px;font-variant-numeric:tabular-nums}
+.fmt{font:500 10.5px ui-monospace,"SF Mono",Menlo,monospace;border:1px solid var(--ln2);border-radius:4px;padding:0 4px;color:var(--tx2);line-height:16px}
+.arrow{color:var(--fa)}
+.sr .why{grid-column:2;font-size:11.5px;color:var(--fa)}
+.opt{display:flex;align-items:center;gap:8px;color:var(--tx2);font-size:12.5px}
+.warnline{display:flex;gap:8px;align-items:flex-start;padding:10px 20px;font-size:12px;color:var(--mu);background:var(--raise);border-bottom:1px solid var(--ln)}
+
+/* sync review */
+.sy{overflow:auto;padding:4px 0 8px}
+.sy h4{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:500;color:var(--mu);padding:14px 20px 6px}
+.sy h4 span{color:var(--fa);font-weight:400}
+.sy .lim{margin:0 20px 6px;font-size:12px;color:var(--fa);display:flex;gap:7px;align-items:flex-start}
+.pg{display:grid;grid-template-columns:16px 24px 1fr auto;gap:12px;align-items:center;padding:8px 20px}
+.pg img{width:24px;height:36px;border-radius:2px;object-fit:cover;box-shadow:0 0 0 1px var(--ln)}
+.pg b{font-weight:500}
+.pg b span{color:var(--mu);font-weight:400;margin-left:6px}
+.pg .chg{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--tx2);white-space:nowrap}
+.pg .chg .was{color:var(--fa);display:flex;align-items:center;gap:6px}
+.pg .chg .now{display:flex;align-items:center;gap:6px}
+.pg small{grid-column:3/5;font-size:11.5px;color:var(--fa);margin-top:-6px}
+.ur{display:grid;grid-template-columns:16px 1fr auto;gap:4px 12px;padding:10px 20px;align-items:start}
+.ur .ck{margin-top:4px}
+.ur q{font:400 15px/1.55 "Literata",Georgia,serif;color:var(--tx);quotes:none;text-wrap:pretty}
+.ur q span{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px;text-decoration-skip-ink:none}
+.ur .src{grid-column:2;font-size:12px;color:var(--fa);display:flex;gap:6px;align-items:center}
+.ur .src b{font-weight:500;color:var(--mu)}
+.ur .nt{grid-column:2;font-size:12.5px;color:var(--tx2);border-left:2px solid var(--ln2);padding-left:9px;margin-top:2px}
+.ur.off q,.ur.off .nt{opacity:.45}
+.lc{display:inline-flex;gap:6px;align-items:center;font-size:11.5px;color:var(--tx2);border:1px solid var(--ln2);border-radius:999px;padding:0 8px;line-height:20px;white-space:nowrap}
+.lc:hover{background:var(--hv)}
+.lc i{width:9px;height:2px;border-radius:1px}
+.ur.nomatch{background:var(--raise)}
+.ur .nm{grid-column:2;font-size:12px;color:var(--mu);display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:2px}
+.skip{margin:6px 20px 4px;font-size:12px;color:var(--fa);display:flex;gap:7px;align-items:center}
+.dlg .df .opt{margin-right:auto}
+</style>
+</head>
+<body>
+<section class="intro" data-fit>
+  <div>
+    <h1><svg class="lg" viewBox="0 0 30 30"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg>Nightstand <span>Devices</span></h1>
+    <p>Plug in a Kindle or Kobo and it appears in the sidebar. Its page shows what's on it, sends books in a format it can read, and brings back what you did on it: highlights become underlines in Notes, and a Kobo's reading position moves books to Reading or Finished. It all comes in as soon as the device is connected, and a summary shows what changed so anything can be taken back out.</p>
+  </div>
+  <dl>
+    <dt>Data</dt><dd>Library and covers from Open Library. Passages are real lines from the books</dd>
+    <dt>Try</dt><dd>Click the devices in the sidebar · See what came in, in 01 · Send in 02 and watch the sidebar · untick in 03 and watch the sidebar counts · hover a row to remove it</dd>
+  </dl>
+</section>
+
+<section class="frame" data-fit data-init='{"theme":"dark","view":"kindle"}'>
+  <header><span class="n">01</span><b>A Kindle is connected</b><p>Dark. What's on it, split into books from your library and books only on the Kindle. New highlights from the Kindle are already in Notes; the banner says what came in.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"light","view":"lib","picked":["Piranesi","Klara and the Sun","Thinking, Fast and Slow"],"dlg":"send"}'>
+  <header><span class="n">02</span><b>Sending books</b><p>Light. Three books selected with X, then S. Each row says what will happen to the file, and conversion only happens when the Kindle can't read what you have.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"dark","view":"kobo","kobo":true,"dlg":"sync"}'>
+  <header><span class="n">03</span><b>What came back</b><p>Dark. A Kobo shares its reading positions as well as its highlights. Three books were started or finished on it and four passages were highlighted. All of it is already in the library; unticking a row takes it back out.</p></header>
+  <div class="win"></div>
+</section>
+<section class="frame" data-fit data-init='{"theme":"light","view":"kobo","queue":true}'>
+  <header><span class="n">04</span><b>When it isn't plugged in</b><p>Light. The Kobo's page still shows what was on it last time. Books sent while it's away wait in a queue and go the next time it's connected. Nothing is sent automatically.</p></header>
+  <div class="win"></div>
+</section>
+
+<section class="qs" data-fit>
+  <h2>How it behaves</h2>
+  <ol>
+    <li><b>Send the best file you have.</b> If the library already has a format the device reads, it goes as is. Otherwise the EPUB is converted (AZW3 for Kindle), and the converted copy is kept in the library so it doesn't happen twice. PDFs are only sent when there's nothing else.</li>
+    <li><b>Highlights come back as underlines.</b> Kindle's My Clippings.txt and Kobo's database are read on connect. Each passage is matched to the book and its place in the text, labelled Quote, and added straight away. Anything already in Notes is skipped, and passages from books that aren't in the library are left out unless you tick them.</li>
+    <li><b>Progress only moves forward.</b> A Kobo position further on than Nightstand's moves the book along (Not started → Reading → Finished). A position behind Nightstand's is ignored. Kindle doesn't share positions for books sent over USB, so it never changes status.</li>
+    <li><b>Removing from a device never touches the library.</b> Books bought from Amazon or Kobo are protected, so they're listed but can't be copied in.</li>
+  </ol>
+</section>
+<section class="qs" data-fit>
+  <h2>Decided</h2>
+  <ol>
+    <li><b>No automatic sending.</b> Books only go to a device when you send them.</li>
+    <li><b>Highlights and progress come in automatically</b> on connect. The banner and summary show what came in, and "Ask first" or "Never" are settings for anyone who wants them.</li>
+    <li><b>USB only</b> in the first version. No Send to Kindle email or Kobo Dropbox sync.</li>
+  </ol>
+</section>
+
+<script>
+const LIB = [{"t": "Project Hail Mary", "a": "Andy Weir", "y": 2021, "ed": "2021", "pub": "Ballantine Books", "pages": 496, "tags": ["Science Fiction"], "d": "Ryland Grace is the sole survivor on a desperate, last-chance mission–and if he fails, humanity and the earth itself will perish. Except that right now, he doesn’t know that. He can’t even remember his own name, let alone the nature of his assignment or how to complete it. All he knows is that he’s been asleep for a very, very long time.", "cover": "https://covers.openlibrary.org/b/id/12455001-L.jpg?default=false", "isbn": "9780593135204", "series": null, "si": null, "olr": 4.52}, {"t": "Dune", "a": "Frank Herbert", "y": 1965, "ed": "2020", "pub": "Ace", "pages": 896, "tags": ["Science Fiction"], "d": "Set on the desert planet Arrakis, Dune is the story of the boy Paul Atreides, heir to a noble family tasked with ruling an inhospitable world where the only thing of value is the \"spice\" melange, a drug capable of extending life and enhancing consciousness. Coveted across the known universe, melange is a prize worth killing for...", "cover": "https://covers.openlibrary.org/b/id/15110282-L.jpg?default=false", "isbn": "9780441172719", "series": "Dune Chronicles", "si": 1, "olr": 4.31}, {"t": "The Left Hand of Darkness", "a": "Ursula K. Le Guin", "y": 1969, "ed": "2003", "pub": "Ace Books", "pages": 304, "tags": ["Science Fiction"], "d": "One of my favorite novels is The Left Hand of Darkness, by Ursula K Le Guin. For more than 40 years I've been recommending this book to people who want to try science fiction for the first time, and it still serves very well for that.", "cover": "https://covers.openlibrary.org/b/id/6989406-L.jpg?default=false", "isbn": "9780441478125", "series": null, "si": null, "olr": 4.26}, {"t": "Piranesi", "a": "Susanna Clarke", "y": 2020, "ed": "2020", "pub": "Bloomsbury Publishing", "pages": 245, "tags": ["Fantasy"], "d": "Piranesi's house is no ordinary building; its rooms are infinite, its corridors endless, its walls are lined with thousands upon thousands of statues, each one different from all the others.", "cover": "https://covers.openlibrary.org/b/id/10226290-L.jpg?default=false", "isbn": "9781635575637", "series": null, "si": null, "olr": 4.33}, {"t": "Klara and the Sun", "a": "Kazuo Ishiguro", "y": 2019, "ed": "2021", "pub": "Knopf", "pages": 304, "tags": ["Literary Fiction", "Science Fiction"], "d": "\"Klara and the Sun, the first novel by Kazuo Ishiguro since he was awarded the Nobel Prize in Literature, tells the story of Klara, an Artificial Friend with outstanding observational qualities, who, from her place in the store, watches carefully the behavior of those who come in to browse, and of those who pass on the street outside.", "cover": "https://covers.openlibrary.org/b/id/10673548-L.jpg?default=false", "isbn": "9780593318171", "series": null, "si": null, "olr": 3.79}, {"t": "The Remains of the Day", "a": "Kazuo Ishiguro", "y": 1989, "ed": "1993", "pub": "Vintage International", "pages": 254, "tags": ["Literary Fiction"], "d": "In the summer of 1956, Stevens, the ageing butler of Darlington Hall, embarks on a leisurely holiday that will take him deep into the countryside and into his past . .", "cover": "https://covers.openlibrary.org/b/id/15241848-L.jpg?default=false", "isbn": "9780679731726", "series": null, "si": null, "olr": 4.21}, {"t": "Thinking, Fast and Slow", "a": "Daniel Kahneman", "y": 2011, "ed": "2011", "pub": "Farrar, Straus and Giroux", "pages": 548, "tags": ["Nonfiction", "Psychology"], "d": "In his mega bestseller, Thinking, Fast and Slow, Daniel Kahneman, world-famous psychologist and winner of the Nobel Prize in Economics, takes us on a groundbreaking tour of the mind and explains the two systems that drive the way we think. System 1 is fast, intuitive, and emotional; System 2 is slower, more deliberative, and more logical.", "cover": "https://covers.openlibrary.org/b/id/13290711-L.jpg?default=false", "isbn": "9780374275631", "series": null, "si": null, "olr": null}, {"t": "Sapiens", "a": "Yuval Noah Harari", "y": 2011, "ed": "2011", "pub": "Harper", "pages": 464, "tags": ["Nonfiction", "History"], "d": "From a renowned historian comes a groundbreaking narrative of humanity’s creation and evolution—a #1 international bestseller—that explores the ways in which biology and history have defined us and enhanced our understanding of what it means to be “human.”", "cover": "https://covers.openlibrary.org/b/id/14369194-L.jpg?default=false", "isbn": "9780062316097", "series": null, "si": null, "olr": 4.19}, {"t": "Circe", "a": "Madeline Miller", "y": 2018, "ed": "2018", "pub": "Little, Brown and Company", "pages": 393, "tags": ["Fantasy", "Mythology"], "d": "In the house of Helios, god of the sun and mightiest of the Titans, a daughter is born. But Circe is a strange child--not powerful, like her father, nor viciously alluring like her mother.", "cover": "https://covers.openlibrary.org/b/id/8283869-L.jpg?default=false", "isbn": "9780316556347", "series": null, "si": null, "olr": 4.15}, {"t": "The Three-Body Problem", "a": "Cixin Liu", "y": 2008, "ed": "2016", "pub": "A Tor Book / Tom Doherty Associates", "pages": 416, "tags": ["Science Fiction"], "d": "Cixin Liu's trilogy-opening novel about first contact with aliens and the clandestine struggle with them over Earth's future, and its scientific progress in particular. Set against the backdrop of China's Cultural Revolution, a secret military project sends signals into space in an attempt to make contact with aliens—and they succeed.", "cover": "https://covers.openlibrary.org/b/id/8478888-L.jpg?default=false", "isbn": "9780765382030", "series": "Remembrance of Earth's Past", "si": 1, "olr": 3.94}, {"t": "The Dark Forest", "a": "Cixin Liu", "y": 2008, "ed": "2016", "pub": "Tor Books", "pages": 562, "tags": ["Science Fiction"], "d": "In The Dark Forest, Earth is reeling from the revelation of a coming alien invasion-in just four centuries' time.", "cover": "https://covers.openlibrary.org/b/id/14570131-L.jpg?default=false", "isbn": "9780765386694", "series": "Remembrance of Earth's Past", "si": 2, "olr": 4.44}, {"t": "Educated", "a": "Tara Westover", "y": 2018, "ed": "2018", "pub": "Random House", "pages": 384, "tags": ["Nonfiction", "Memoir"], "d": "Educated is a 2018 memoir by the American author Tara Westover. Westover recounts overcoming her survivalist Mormon family in order to go to college, and emphasizes the importance of education in enlarging her world.", "cover": "https://covers.openlibrary.org/b/id/8314077-L.jpg?default=false", "isbn": "9780399590511", "series": null, "si": null, "olr": 4.45}, {"t": "A Gentleman in Moscow", "a": "Amor Towles", "y": 2016, "ed": "2016", "pub": "Viking", "pages": 462, "tags": ["Literary Fiction", "Historical Fiction"], "d": "A Gentleman in Moscow is a 2016 novel by Amor Towles.", "cover": "https://covers.openlibrary.org/b/id/11563116-L.jpg?default=false", "isbn": "9780670026197", "series": null, "si": null, "olr": 3.89}, {"t": "The Hobbit", "a": "J. R. R. Tolkien", "y": 1937, "ed": "2012", "pub": "Mariner Books", "pages": 300, "tags": ["Fantasy", "Classics"], "d": "The Hobbit is a tale of high adventure, undertaken by a company of dwarves in search of dragon-guarded gold. A reluctant partner in this perilous quest is Bilbo Baggins, a comfort-loving unambitious hobbit, who surprises even himself by his resourcefulness and skill as a burglar.", "cover": "https://covers.openlibrary.org/b/id/12003329-L.jpg?default=false", "isbn": "9780547928227", "series": null, "si": null, "olr": 4.3}, {"t": "Middlemarch", "a": "George Eliot", "y": 1871, "ed": "2003", "pub": "Penguin Classics", "pages": 810, "tags": ["Classics", "Literary Fiction"], "d": "Eliot’s epic of 19th century provincial social life, set in a fictitious Midlands town in the years 1830-32, has several interlocking storylines blended effortlessly together to form a fully coherent narrative. Its main themes are the status of women, social expectations and hypocrisy, religion, political reform and education.", "cover": "https://covers.openlibrary.org/b/id/9328284-L.jpg?default=false", "isbn": "9780141439549", "series": null, "si": null, "olr": 4.15}, {"t": "Pride and Prejudice", "a": "Jane Austen", "y": 1813, "ed": "2003", "pub": "Penguin Books", "pages": 435, "tags": ["Classics", "Romance"], "d": "Pride and Prejudice is an 1813 novel of manners written by Jane Austen. The novel follows the character development of Elizabeth Bennet, the dynamic protagonist of the book who learns about the repercussions of hasty judgments and comes to appreciate the difference between superficial goodness and actual goodness. Mr.", "cover": "https://covers.openlibrary.org/b/id/12645114-L.jpg?default=false", "isbn": "9780141439518", "series": null, "si": null, "olr": 4.21}];
+const SHELF_COLOR = {"Science Fiction":"#4ea7fc","Fantasy":"#b17ae8","Literary Fiction":"#f2994a","Nonfiction":"#4cb782","Classics":"#eb5757","Mythology":"#f2c94c","History":"#26b5ce","Psychology":"#e86fb0","Memoir":"#95a2b3","Romance":"#f7a8b8","Historical Fiction":"#d4a373"};
+const LOCAL = {
+  "Project Hail Mary":["reading",64,["EPUB","AZW3","MOBI"]], "Dune":["finished",100,["EPUB","AZW3","PDF"]], "The Left Hand of Darkness":["want",0,["EPUB"]],
+  "Piranesi":["want",0,["EPUB","AZW3"]], "Klara and the Sun":["want",0,["EPUB"]], "The Remains of the Day":["finished",100,["EPUB","MOBI"]],
+  "Thinking, Fast and Slow":["want",0,["PDF","EPUB"]], "Sapiens":["want",0,["EPUB","PDF"]], "Circe":["finished",100,["EPUB"]],
+  "The Three-Body Problem":["finished",100,["EPUB","AZW3"]], "The Dark Forest":["reading",22,["EPUB","AZW3"]], "Educated":["want",0,["EPUB","AZW3"]],
+  "A Gentleman in Moscow":["want",0,["EPUB"]], "The Hobbit":["finished",100,["EPUB","MOBI","PDF"]], "Middlemarch":["reading",39,["EPUB","AZW3"]],
+  "Pride and Prejudice":["finished",100,["EPUB"]],
+};
+const SIZE = {"Project Hail Mary":2.9,"Middlemarch":3.4,"The Dark Forest":2.1,"Dune":2.6,"The Three-Body Problem":1.8,"The Hobbit":1.3,"Piranesi":1.2,"Klara and the Sun":1.9,"Thinking, Fast and Slow":2.4,"The Left Hand of Darkness":0.9,"A Gentleman in Moscow":2.4,"Educated":1.7,"Sapiens":3.1,"Circe":1.5};
+const LABELS = [["Quote", "var(--prog)"], ["Idea", "var(--done)"], ["Question", "var(--ac2)"], ["Disagree", "#d0517a"]];
+
+/* What each device reported, as of 28 October 2026 */
+const KINDLE_ON = [["Project Hail Mary","AZW3"],["Middlemarch","AZW3"],["The Dark Forest","AZW3","changed"],["Dune","AZW3"],["The Three-Body Problem","AZW3"],["The Hobbit","MOBI"]];
+const KINDLE_ONLY = [{t:"The Martian",a:"Andy Weir",cover:11447888,fmt:"AZW3",mb:1.6,kind:"side"},{t:"Atomic Habits",a:"James Clear",cover:12539702,fmt:"KFX",mb:4.8,kind:"drm"}];
+const KOBO_ON = [["Piranesi",54],["Klara and the Sun",100],["The Left Hand of Darkness",12],["A Gentleman in Moscow",0],["Educated",0]];
+const KINDLE_CLIPS = [
+  {book:"Dune", where:"Location 190", text:"I must not fear. Fear is the mind-killer."},
+  {book:"The Hobbit", where:"Location 14", text:"In a hole in the ground there lived a hobbit."},
+  {book:"Middlemarch", where:"Chapter 20 · Location 3,412", text:"If we had a keen vision and feeling of all ordinary human life, it would be like hearing the grass grow and the squirrel's heart beat, and we should die of that roar which lies on the other side of silence."},
+  {book:"Atomic Habits", where:"Location 412", text:"You do not rise to the level of your goals. You fall to the level of your systems.", nomatch:true},
+];
+const KOBO_PROG = [["Piranesi","want",0,"reading",54,"Read on Kobo, last opened yesterday"],["Klara and the Sun","want",0,"finished",100,"Finished on Kobo on 18 October"],["The Left Hand of Darkness","want",0,"reading",12,"Read on Kobo, last opened 26 October"]];
+const KOBO_HL = [
+  {book:"Piranesi", where:"Part 1", text:"The Beauty of the House is immeasurable; its Kindness infinite."},
+  {book:"Klara and the Sun", where:"Part 6", text:"There was something very special, but it wasn't inside Josie. It was inside those who loved her.", note:"The whole book in two sentences."},
+  {book:"The Left Hand of Darkness", where:"Chapter 16", text:"Light is the left hand of darkness and darkness the right hand of light."},
+  {book:"The Left Hand of Darkness", where:"Chapter 5", text:"The only thing that makes life possible is permanent, intolerable uncertainty: not knowing what comes next."},
+];
+
+const C = (id, s = "M") => `https://covers.openlibrary.org/b/id/${id}-${s}.jpg`;
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const STATUS = {reading: "Reading", want: "Not started", finished: "Finished"};
+let iconUid = 0;
+const BOOKMARK = "M4.5 2.25h7v11.5L8 11.1l-3.5 2.65z";
+function statusIcon(st, prog = 0) {
+  const svg = inner => `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  if (st === "finished") return svg(`<path d="${BOOKMARK}" fill="var(--done)" stroke="var(--done)" stroke-width="1.4"/><path d="m6.1 6.4 1.4 1.4 2.5-2.7" stroke="#fff" stroke-width="1.4"/>`);
+  if (st === "reading") {
+    const fill = prog < 37.5 ? .25 : prog <= 62.5 ? .5 : .75;
+    const id = "bm" + (++iconUid), h = (8.85 * fill + .25).toFixed(2);
+    return svg(`<defs><clipPath id="${id}"><rect x="0" y="2" width="16" height="${h}"/></clipPath></defs><path d="${BOOKMARK}" fill="var(--prog)" clip-path="url(#${id})"/><path d="${BOOKMARK}" stroke="var(--prog)" stroke-width="1.4"/>`);
+  }
+  return svg(`<path d="${BOOKMARK}" stroke="var(--mu)" stroke-width="1.4"/>`);
+}
+const sv = (inner, w = 14, sw = 1.4) => `<svg width="${w}" height="${w}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const I = {
+  book: sv('<path d="M3 2.5h7.5a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2z"/><path d="M3 11.5a2 2 0 0 1 2-2h7.5"/>'),
+  plus: sv('<path d="M8 3v10M3 8h10"/>', 14, 1.5),
+  x: sv('<path d="m4 4 8 8M12 4l-8 8"/>', 14, 1.5),
+  xs: sv('<path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/>', 12, 1.5),
+  up: sv('<path d="m4 10 4-4 4 4"/>', 14, 1.5),
+  down: sv('<path d="m4 6 4 4 4-4"/>', 14, 1.5),
+  globe: sv('<circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c1.8 1.7 2.6 3.7 2.6 6S9.8 12.3 8 14C6.2 12.3 5.4 10.3 5.4 8S6.2 3.7 8 2z"/>', 12, 1.3),
+  pen: sv('<path d="M10.5 2.8 13.2 5.5 6 12.7l-3.2.5.5-3.2z"/>', 12, 1.4),
+  refresh: sv('<path d="M13 5.5A5.5 5.5 0 0 0 3.2 5M3 10.5A5.5 5.5 0 0 0 12.8 11"/><path d="M13 2.5v3h-3M3 13.5v-3h3"/>'),
+  search: sv('<circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/>', 14, 1.5),
+  check: sv('<path d="m3.5 8.3 2.8 2.8 6.2-6.6"/>', 11, 1.8),
+  img: sv('<rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="6" cy="6.5" r="1.2"/><path d="m2.5 12 3.8-3.6 2.7 2.4 1.8-1.6L14 12"/>', 16),
+  info: sv('<circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.6M8 5.1v.1"/>', 12, 1.5),
+  file: sv('<path d="M4 1.75h5.5L12.5 4.75v9.5H4z"/><path d="M9.5 1.75v3h3"/>', 12),
+};
+
+Object.assign(I, {
+  reader: sv('<rect x="3.5" y="1.75" width="9" height="12.5" rx="1.6"/><path d="M5.75 4.5h4.5M5.75 6.75h4.5M5.75 9h2.5"/>', 12, 1.3),
+  send: sv('<path d="M2.5 8h9M8 4.5 11.5 8 8 11.5"/><path d="M13.5 3v10"/>'),
+  eject: sv('<path d="M8 3 3.5 8.5h9z"/><path d="M3.5 12h9"/>'),
+  hl: sv('<path d="M3 13h10"/><path d="m9.5 2.5 3 3-5.5 5.5H4v-3z"/>', 16),
+  clock: sv('<circle cx="8" cy="8" r="6"/><path d="M8 4.8V8l2 1.5"/>', 16),
+  copy: sv('<rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>', 12),
+  lock: sv('<rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>', 12),
+  arrow: sv('<path d="M3 8h10M9.5 4.5 13 8l-3.5 3.5"/>', 12, 1.4),
+});
+const LOGO = '<svg class="lg" viewBox="0 0 30 30"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg>';
+/* A drawn e-reader for the device header */
+const READER_ART = (kobo, theme) => `<svg width="64" height="84" viewBox="0 0 64 84"><rect x="1" y="1" width="62" height="82" rx="7" fill="${theme === "light" ? "#26272b" : "#2c2d32"}" stroke="${theme === "light" ? "#111" : "#3a3b41"}"/>
+  <rect x="7" y="8" width="50" height="64" rx="1.5" fill="#ebe7dd"/><path d="M13 18h38M13 24h38M13 30h32M13 36h38M13 42h26M13 48h38M13 54h34" stroke="#b9b3a6" stroke-width="2" stroke-linecap="round"/>
+  ${kobo ? '<rect x="27" y="76" width="10" height="2" rx="1" fill="#55565c"/>' : '<text x="32" y="80" text-anchor="middle" font-size="5" font-family="Inter" fill="#77787e" letter-spacing=".5">kindle</text>'}</svg>`;
+
+function mount(win, init) {
+  const S = Object.assign({theme: "dark", view: "lib", dlg: null, picked: [], kobo: false, queue: false}, init);
+  const root = document.createElement("div");
+  root.className = "app"; root.tabIndex = -1;
+  win.appendChild(root);
+
+  const books = LIB.map(b => { const [st, prog, fmt] = LOCAL[b.t]; return {t: b.t, a: b.a, tags: b.tags, st, prog, fmt: [...fmt], cover: +b.cover.match(/id\/(\d+)/)[1]}; });
+  const byT = t => books.find(b => b.t === t);
+  const kindle = {key: "kindle", name: "Kindle Paperwhite", short: "Kindle", conn: true, totalGB: 6.2, otherGB: 3.0, fmt: "AZW3", last: "21 October",
+    on: KINDLE_ON.map(([t, f, s]) => ({t, f, state: s || "ok"})), only: KINDLE_ONLY.map(o => ({...o})), queue: [],
+    clips: KINDLE_CLIPS.map(c => ({...c, on: !c.nomatch, label: 0})), reviewed: false, ask: "auto"};
+  const kobo = {key: "kobo", name: "Kobo Clara 2E", short: "Kobo", conn: S.kobo, totalGB: 6.4, otherGB: 1.3, fmt: "EPUB", last: "19 October",
+    on: KOBO_ON.map(([t, p]) => ({t, f: "EPUB", state: "ok", p})), only: [], queue: S.queue ? [{t: "Sapiens"}, {t: "Circe"}] : [],
+    prog: KOBO_PROG.map(([t, fs, fp, ts, tp, why]) => ({t, fs, fp, ts, tp, why, on: true})), clips: KOBO_HL.map(c => ({...c, on: true, label: 0})), reviewed: false, ask: "auto"};
+  const DEV = {kindle, kobo};
+  // Frame 04: the Kobo's last visit was brought in and seen.
+  if (S.queue) { kobo.reviewed = true; kobo.prog.forEach(p => Object.assign(byT(p.t), {st: p.ts, prog: p.tp})); }
+  /* Connected devices bring everything in straight away; the summary can take any of it back out. */
+  let notes0 = 0;
+  const setProg = (p, on) => { const b = byT(p.t); Object.assign(b, on ? {st: p.ts, prog: p.tp} : {st: p.fs, prog: p.fp}); p.on = on; };
+  const setClip = (c, on) => { if (c.on !== on) { c.on = on; notes0 += on ? 1 : -1; } };
+  [kindle, kobo].forEach(d => { if (d.conn && !d.reviewed) { (d.prog || []).forEach(p => setProg(p, true)); d.clips.forEach(c => { if (c.on) notes0++; }); } });
+  let picked = new Set(S.picked), focus = S.picked[0] || null, notes = S.queue ? 21 : 17, job = null, tt;
+  let send = {to: "kindle", keep: true};
+
+  root.innerHTML = `
+  <aside class="sb">
+    <div class="lights" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="ws">${LOGO}<b>Nightstand</b><button class="add" title="Add books">${I.plus}</button></div>
+    <button class="nv" data-go="lib">${I.book}All books<span class="ct" data-c="all"></span></button>
+    <button class="nv" data-go="lib">${statusIcon("reading", 50)}Reading<span class="ct" data-c="reading"></span></button>
+    <button class="nv" data-go="lib">${statusIcon("want")}Not started<span class="ct" data-c="want"></span></button>
+    <button class="nv" data-go="lib">${statusIcon("finished")}Finished<span class="ct" data-c="finished"></span></button>
+    <div class="sec">Notes</div>
+    <button class="nv"><span class="ul"><i style="background:var(--prog)"></i></span>All underlines<span class="ct" data-c="notes"></span></button>
+    <div class="sec">Devices</div>
+    <div class="devs"></div>
+    <div class="sb-foot"><div class="jobs"></div><div class="theme" role="group" aria-label="Theme"><button data-theme="dark">Dark</button><button data-theme="light">Light</button></div></div>
+  </aside>
+  <section class="main">
+    <header class="hd"></header>
+    <div class="body" style="min-height:0;display:grid"></div>
+    <div class="toast" role="status"></div>
+  </section>`;
+  const $ = s => root.querySelector(s), $$ = s => [...root.querySelectorAll(s)];
+  const toast = m => { const t = $(".toast"); t.textContent = m; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 2200); };
+  const mb = n => n >= 1000 ? (n / 1000).toFixed(1) + " GB" : n.toFixed(1) + " MB";
+  const usedMB = d => d.on.reduce((s, x) => s + (SIZE[x.t] || 1), 0) + d.only.reduce((s, x) => s + x.mb, 0);
+  const freeGB = d => d.totalGB - d.otherGB - usedMB(d) / 1000;
+    const pendingCount = d => d.reviewed ? 0 : d.clips.filter(c => c.on).length + (d.prog ? d.prog.filter(p => p.on).length : 0);
+
+  function drawSide() {
+    root.dataset.theme = S.theme;
+    $$(".theme button").forEach(b => b.classList.toggle("on", b.dataset.theme === S.theme));
+    $$(".sb .ct[data-c]").forEach(c => c.textContent = c.dataset.c === "all" ? books.length : c.dataset.c === "notes" ? notes + notes0 : books.filter(b => b.st === c.dataset.c).length);
+    $$(".nv[data-go]").forEach((n, i) => n.classList.toggle("on", S.view === "lib" && i === 0));
+    $(".devs").innerHTML = Object.values(DEV).map(d => `<button class="dv${S.view === d.key ? " on" : ""}" data-go="${d.key}"><span class="led${d.conn ? "" : " off"}"></span>${d.name}<small>${d.conn ? (pendingCount(d) ? `${pendingCount(d)} new` : `${freeGB(d).toFixed(1)} GB free`) : d.queue.length ? `${d.queue.length} waiting` : "Not connected"}</small></button>`).join("");
+    $(".jobs").innerHTML = job ? `<div class="job"><div class="jt">${I.send}${esc(job.title)}</div><small>${esc(job.step)}</small><div class="bar"><i style="width:${job.pct}%"></i></div></div>` : "";
+  }
+  function onDevices(t) {
+    return Object.values(DEV).filter(d => d.on.some(x => x.t === t)).map(d => `<span title="On ${d.name}">${I.reader}</span>`).join("");
+  }
+
+  /* ---- library ---- */
+  function drawLib() {
+    $(".hd").innerHTML = `<span class="crumb">All books<small>${picked.size ? `${picked.size} selected` : books.length}</small></span>
+      <div class="rt">${picked.size ? `<button class="hbtn" data-a="clear">Clear</button><button class="pbtn" data-a="send">${I.send}Send to device<span style="opacity:.6;margin-left:2px">S</span></button>` : ""}</div>`;
+    $(".body").innerHTML = `<div class="list" tabindex="0">${["reading", "want", "finished"].map(st => {
+      const arr = books.filter(b => b.st === st);
+      return arr.length ? `<div class="gh">${statusIcon(st, 50)}${STATUS[st]}<span class="cn">${arr.length}</span></div>` + arr.map(b => `
+        <div class="row${focus === b.t ? " focus" : ""}${picked.has(b.t) ? " picked" : ""}" data-t="${esc(b.t)}">
+          <span class="cb">${picked.has(b.t) ? I.check : ""}</span>${statusIcon(b.st, b.prog)}<img class="cv" src="${C(b.cover, "S")}" alt="">
+          <span class="tt">${esc(b.t)}</span><span class="au">${esc(b.a)}</span><span class="sp"></span>
+          ${b.tags.slice(0, 2).map(s => `<span class="lb"><i style="background:${SHELF_COLOR[s] || "#888"}"></i>${esc(s)}</span>`).join("")}
+          <span class="ond">${onDevices(b.t)}</span><span class="fm">${b.fmt.join(" · ")}</span></div>`).join("") : "";
+    }).join("")}</div>`;
+  }
+
+  /* ---- a device's page ---- */
+  function drawDevice(d) {
+    const free = freeGB(d), used = usedMB(d) / 1000;
+    $(".hd").innerHTML = `<span class="crumb">${d.name}<small>${d.conn ? "USB" : `Last connected ${d.last}`}</small></span>
+      <div class="rt">${d.conn ? `<button class="hbtn" data-a="addto">${I.plus}Send books…</button><button class="hbtn" data-a="eject">${I.eject}Eject</button>` : ""}</div>`;
+    const np = d.prog && !d.reviewed ? d.prog.filter(p => p.on).length : 0, nc = d.reviewed ? 0 : d.clips.filter(c => c.on).length;
+    const banner = d.conn && !d.reviewed && (nc || np) ? `<div class="banner"><span class="bi">${I.hl}</span><div><b>${[np ? `${np} books moved on` : "", nc ? `${nc} highlights added to Notes` : ""].filter(Boolean).join(" and ")}</b><p>${d.key === "kindle" ? "From My Clippings.txt, when the Kindle connected just now." : "From the Kobo's reading positions and highlights, when it connected just now."} Anything can be taken back out.</p></div><button class="hbtn" data-a="review">See what came in</button><button class="ib" data-a="dismiss" title="Dismiss">${I.x}</button></div>`
+      : d.queue.length ? `<div class="banner"><span class="bi q">${I.clock}</span><div><b>${d.queue.length} books waiting to send</b><p>They'll go the next time the ${d.short} is connected. Nothing else needs it to be plugged in.</p></div></div>` : "";
+    const row = (x, extra) => { const b = byT(x.t); return `<div class="row${d.conn ? "" : " dim"}" data-t="${esc(x.t)}">${statusIcon(b.st, b.prog)}<img class="cv" src="${C(b.cover, "S")}" alt=""><span class="tt">${esc(b.t)}</span><span class="au">${esc(b.a)}</span><span class="sp"></span>${extra}</div>`; };
+    const state = x => x.state === "changed" ? `<span class="dst warn">Details changed since it was sent</span><button class="rb" data-a="update" data-t="${esc(x.t)}">Update</button>` : x.state === "sent" ? `<span class="dst ok">Sent just now</span>` : "";
+    $(".body").innerHTML = `<div class="dp">
+      <div class="dsum">${READER_ART(d.key === "kobo", S.theme)}<div>
+        <h2>${d.name}<span class="pill${d.conn ? "" : " off"}">${d.conn ? "Connected" : "Not connected"}</span></h2>
+        <div class="sub">${d.on.length + d.only.length} books · reads ${d.key === "kindle" ? "AZW3, MOBI and PDF" : "EPUB, KEPUB and PDF"} · ${d.conn ? `${free.toFixed(1)} GB free of ${d.totalGB} GB` : `${free.toFixed(1)} GB free when last seen`}</div>
+        <div class="stor"><div class="sbar"><i style="width:${Math.max(used / d.totalGB * 100, .6)}%;background:var(--ac)"></i><i style="width:${d.otherGB / d.totalGB * 100}%;background:var(--mu);opacity:.55"></i></div>
+          <div class="slg"><span><i style="background:var(--ac)"></i>Books ${mb(usedMB(d))}</span><span><i style="background:var(--mu);opacity:.55"></i>${d.key === "kindle" ? "System and Amazon purchases" : "System"} ${d.otherGB} GB</span><span><i style="background:var(--ln2)"></i>Free ${free.toFixed(1)} GB</span></div></div>
+      </div></div>
+      ${banner}
+      ${d.queue.length ? `<div class="gh">${I.clock}Waiting to send<span class="cn">${d.queue.length}</span></div>` + d.queue.map(x => row(x, `<span class="dst">EPUB, sent as is</span><span class="mb">${mb(SIZE[x.t])}</span><button class="rb" data-a="unqueue" data-t="${esc(x.t)}">Cancel</button>`)).join("") : ""}
+      <div class="gh">${I.book}From your library<span class="cn">${d.on.length}</span></div>
+      ${d.on.map(x => row(x, `${state(x)}${d.key === "kobo" ? `<span class="pc">${x.p ? x.p + "%" : ""}</span>` : ""}<span class="fm" style="width:44px">${x.f}</span><span class="mb">${mb(SIZE[x.t])}</span>${d.conn ? `<button class="ib rm" data-a="remove" data-t="${esc(x.t)}" title="Remove from ${d.short}">${I.xs}</button>` : ""}`)).join("")}
+      ${d.only.length ? `<div class="gh">${I.reader}Only on this ${d.short}<span class="cn">${d.only.length}</span></div>` + d.only.map(o => `<div class="row" data-only="${esc(o.t)}"><span style="width:14px"></span><img class="cv" src="${C(o.cover, "S")}" alt=""><span class="tt">${esc(o.t)}</span><span class="au">${esc(o.a)}</span><span class="sp"></span>
+          ${o.kind === "drm" ? `<span class="dst" style="display:flex;gap:5px;align-items:center">${I.lock}Bought from Amazon. Protected, so it can't be copied</span>` : o.kind === "copied" ? `<span class="dst ok">Copied to your library</span>` : `<span class="dst">Not in your library</span><button class="rb" data-a="copyin" data-t="${esc(o.t)}">Copy to library</button>`}
+          <span class="fm" style="width:44px">${o.fmt}</span><span class="mb">${mb(o.mb)}</span><span style="width:24px"></span></div>`).join("") : ""}
+      <div class="foot">${d.key === "kindle" ? "The Kindle user guide and dictionaries are hidden." : "Kobo's own store books and the user guide are hidden."}</div>
+      <div class="prefs"><h4>When the ${d.short} connects</h4>
+        <div class="pr"><div><b>${d.key === "kindle" ? "Highlights" : "Highlights and reading progress"}</b><p>${d.key === "kindle" ? "Read from My Clippings.txt and added to Notes as underlines." : "Highlights become underlines in Notes. Positions move books to Reading or Finished."}</p></div><div class="seg"><button class="${d.ask === "auto" ? "on" : ""}" data-ask="auto">Automatically</button><button class="${d.ask === "ask" ? "on" : ""}" data-ask="ask">Ask first</button><button class="${d.ask === "never" ? "on" : ""}" data-ask="never">Never</button></div></div>
+        <div class="pr"><div><b>Format</b><p>${d.key === "kindle" ? "Books without an AZW3 are converted from EPUB when sent, and the copy is kept." : "Kobo reads EPUB directly, so nothing is converted."}</p></div><span class="fmt">${d.fmt}</span></div>
+      </div></div>`;
+  }
+
+  /* ---- send dialog ---- */
+  function plan(b, d) {
+    const has = f => b.fmt.includes(f);
+    if (d.key === "kobo") return has("EPUB") ? {html: `<span class="fmt">EPUB</span> sent as is`} : {html: `<span class="fmt">PDF</span> sent as is`};
+    if (has("AZW3")) return {html: `Sends the <span class="fmt">AZW3</span> you already have`};
+    if (has("MOBI")) return {html: `Sends the <span class="fmt">MOBI</span> you already have`};
+    if (has("EPUB")) return {conv: true, html: `<span class="fmt">EPUB</span><span class="arrow">${I.arrow}</span><span class="fmt">AZW3</span> converted first, about 10 seconds`, why: has("PDF") ? "The PDF would have small, fixed-size text on a 6-inch screen, so the EPUB is used." : ""};
+    return {html: `<span class="fmt">PDF</span> sent as is. Text won't reflow on a 6-inch screen`};
+  }
+  function sendHTML() {
+    const d = DEV[send.to], list = [...picked].map(byT), total = list.reduce((s, b) => s + (SIZE[b.t] || 1), 0), conv = list.some(b => plan(b, d).conv);
+    return `<div class="scrim" data-a="scrim"><div class="dlg" style="width:640px" role="dialog" aria-label="Send to device">
+      <div class="dh"><div><h3>Send ${list.length} books</h3><p>${d.conn ? `They'll be on the ${d.short} in a few seconds.` : `The ${d.short} isn't connected. They'll wait and go next time it is.`}</p></div><button class="ib" data-a="close" title="Close (Esc)">${I.x}</button></div>
+      <div class="to">To<div class="seg">${Object.values(DEV).map(x => `<button class="${x.key === send.to ? "on" : ""}" data-to="${x.key}"><span class="led${x.conn ? "" : " off"}"></span>${x.name}</button>`).join("")}</div></div>
+      <div class="sl">${list.map(b => { const p = plan(b, d); return `<div class="sr"><img src="${C(b.cover, "S")}" alt=""><b>${esc(b.t)}<span>${esc(b.a)}</span></b><em>${mb(SIZE[b.t] || 1)}</em><span class="plan">${p.html}</span>${p.why ? `<span class="why">${p.why}</span>` : ""}</div>`; }).join("")}</div>
+      <div class="df">${conv ? `<label class="opt"><button class="ck${send.keep ? " on" : ""}" data-a="keep">${I.check}</button>Keep the converted AZW3 in the library</label>` : `<span class="sp"></span>`}<span>${mb(total)}${d.conn ? ` · ${freeGB(d).toFixed(1)} GB free` : ""}</span><button class="hbtn" data-a="close">Cancel</button><button class="pbtn" data-a="go">${d.conn ? `Send ${list.length} books` : `Queue ${list.length} books`}</button></div>
+    </div></div>`;
+  }
+  function runSend() {
+    const d = DEV[send.to], list = [...picked].map(byT);
+    S.dlg = null; draw();
+    if (!d.conn) { list.forEach(b => d.queue.push({t: b.t})); picked.clear(); toast(`${list.length} books will go to the ${d.short} next time it's connected`); draw(); return; }
+    const steps = list.flatMap(b => plan(b, d).conv ? [[b, `Converting ${b.t} to AZW3`, 1500], [b, `Copying ${b.t}`, 600]] : [[b, `Copying ${b.t}`, 600]]);
+    job = {title: `Sending ${list.length} books to ${d.short}`, step: "", pct: 4};
+    picked.clear(); draw();
+    let i = 0;
+    const next = () => {
+      if (i === steps.length) {
+        job = null; toast(`${list.length} books are on the ${d.name}`); draw(); return;
+      }
+      const [b, label, ms] = steps[i++];
+      job.step = label; job.pct = Math.round(i / steps.length * 100); drawSide();
+      setTimeout(() => {
+        if (label.startsWith("Copying")) { d.on.unshift({t: b.t, f: b.fmt.includes("AZW3") ? "AZW3" : b.fmt.includes("MOBI") ? "MOBI" : b.fmt.includes("EPUB") ? "AZW3" : "PDF", state: "sent"}); if (send.keep && !b.fmt.includes("AZW3") && b.fmt.includes("EPUB")) b.fmt.push("AZW3"); draw(); }
+        next();
+      }, ms);
+    };
+    next();
+  }
+
+  /* ---- review what came back ---- */
+  function syncHTML() {
+    const d = DEV[S.dlgDev || S.view], prog = d.prog || [], clips = d.clips;
+    const nProg = prog.filter(p => p.on).length, nClip = clips.filter(c => c.on).length;
+    const lab = c => `<button class="lc" data-lab="${clips.indexOf(c)}" title="Change label"><i style="background:${LABELS[c.label][1]}"></i>${LABELS[c.label][0]}</button>`;
+    return `<div class="scrim" data-a="scrim"><div class="dlg" style="width:700px;max-height:720px" role="dialog" aria-label="Review">
+      <div class="dh"><div><h3>Brought in from ${d.name}</h3><p>Everything since you last connected on ${d.last}. Untick anything to take it back out.</p></div><button class="ib" data-a="close" title="Close (Esc)">${I.x}</button></div>
+      <div class="sy">
+        ${prog.length ? `<h4>Reading progress<span>${prog.length}</span></h4>${prog.map((p, i) => { const b = byT(p.t); return `<div class="pg"><button class="ck${p.on ? " on" : ""}" data-pg="${i}">${I.check}</button><img src="${C(b.cover, "S")}" alt=""><b>${esc(b.t)}<span>${esc(b.a)}</span></b>
+          <span class="chg"><span class="was">${statusIcon(p.fs, p.fp)}${STATUS[p.fs]}</span><span class="arrow">${I.arrow}</span><span class="now">${statusIcon(p.ts, p.tp)}${STATUS[p.ts]}${p.ts === "reading" ? ` · ${p.tp}%` : ""}</span></span><small>${p.why}</small></div>`; }).join("")}` : ""}
+        ${d.key === "kindle" ? `<div class="lim" style="margin-top:12px">${I.info}<span>Kindle doesn't share reading positions for books sent over USB, so statuses stay as they are.</span></div>` : ""}
+        <h4>Highlights<span>${nClip} added to Notes as underlines</span></h4>
+        ${clips.map((c, i) => c.nomatch ? `<div class="ur nomatch${c.on ? "" : " off"}"><button class="ck${c.on ? " on" : ""}" data-cl="${i}">${I.check}</button><q><span style="text-decoration-color:var(--fa)">${esc(c.text)}</span></q><span></span>
+            <span class="nm">${I.lock}<b style="font-weight:500;color:var(--tx2)">${esc(c.book)}</b> isn't in your library: it was bought from Amazon, so this one was left out. Tick to keep the passage in Notes anyway.</span></div>`
+          : `<div class="ur${c.on ? "" : " off"}"><button class="ck${c.on ? " on" : ""}" data-cl="${i}">${I.check}</button><q><span style="text-decoration-color:${LABELS[c.label][1]}">${esc(c.text)}</span></q>${lab(c)}
+            ${c.note ? `<span class="nt">${esc(c.note)}</span>` : ""}<span class="src"><b>${esc(c.book)}</b>· ${esc(c.where)}${c.note ? " · with a note from the Kobo" : ""}</span></div>`).join("")}
+        ${d.key === "kindle" ? `<div class="skip">${I.check}1 more is already in Notes, so it's skipped: Middlemarch, "We are all humiliated by the sudden discovery…"</div>` : ""}
+      </div>
+      <div class="df"><span class="sp">${[nClip ? `${nClip} ${nClip === 1 ? "underline" : "underlines"} in Notes` : "", nProg ? `${nProg} ${nProg === 1 ? "book" : "books"} moved on` : ""].filter(Boolean).join(" · ") || "Nothing kept"}</span><button class="pbtn" data-a="done">Done</button></div>
+    </div></div>`;
+  }
+
+  function draw() {
+    drawSide();
+    if (S.view === "lib") drawLib(); else drawDevice(DEV[S.view]);
+    $(".scrim")?.remove();
+    if (S.dlg === "send") $(".main").insertAdjacentHTML("beforeend", sendHTML());
+    if (S.dlg === "sync") $(".main").insertAdjacentHTML("beforeend", syncHTML());
+  }
+
+  root.addEventListener("click", e => {
+    const t = e.target;
+    const go = t.closest("[data-go]"), th = t.closest("button[data-theme]"), a = t.closest("[data-a]"), to = t.closest("[data-to]"), ask = t.closest("[data-ask]");
+    if (th) { S.theme = th.dataset.theme; draw(); return; }
+    if (go) { S.view = go.dataset.go; S.dlg = null; draw(); return; }
+    if (to) { send.to = to.dataset.to; draw(); return; }
+    if (ask) { DEV[S.view].ask = ask.dataset.ask; draw(); toast(ask.dataset.ask === "auto" ? "Highlights will come in without asking" : ask.dataset.ask === "never" ? "Highlights will be left on the device" : "You'll be asked each time"); return; }
+    const pg = t.closest("[data-pg]"), cl = t.closest("[data-cl]"), lab = t.closest("[data-lab]");
+    const d = DEV[S.dlgDev || S.view];
+    if (pg) { const p = d.prog[+pg.dataset.pg]; setProg(p, !p.on); draw(); return; }
+    if (cl) { const c = d.clips[+cl.dataset.cl]; setClip(c, !c.on); draw(); return; }
+    if (lab) { const c = d.clips[+lab.dataset.lab]; c.label = (c.label + 1) % 4; draw(); return; }
+    if (a) {
+      const k = a.dataset.a, dev = DEV[S.view];
+      if (k === "scrim" && t !== a) return;
+      if (k === "close" || k === "scrim") { S.dlg = null; draw(); return; }
+      if (k === "send") { send.to = "kindle"; S.dlg = "send"; draw(); return; }
+      if (k === "clear") { picked.clear(); draw(); return; }
+      if (k === "go") { runSend(); return; }
+      if (k === "keep") { send.keep = !send.keep; draw(); return; }
+      if (k === "review") { S.dlg = "sync"; draw(); return; }
+      if (k === "done") { d.reviewed = true; S.dlg = null; draw(); return; }
+      if (k === "dismiss") { dev.reviewed = true; draw(); return; }
+      if (k === "remove") { dev.on = dev.on.filter(x => x.t !== a.dataset.t); draw(); toast(`Removed from the ${dev.short}. Still in your library`); return; }
+      if (k === "update") { dev.on.find(x => x.t === a.dataset.t).state = "sent"; draw(); toast(`Updated on the ${dev.short}`); return; }
+      if (k === "copyin") { dev.only.find(x => x.t === a.dataset.t).kind = "copied"; draw(); toast(`${a.dataset.t} copied to your library as Not started`); return; }
+      if (k === "unqueue") { dev.queue = dev.queue.filter(x => x.t !== a.dataset.t); draw(); toast("Won't be sent"); return; }
+            if (k === "eject") { dev.conn = false; draw(); toast(`Safe to unplug the ${dev.short}`); return; }
+      if (k === "addto") { S.view = "lib"; draw(); toast("Select books with X, then press S"); return; }
+    }
+    const row = t.closest(".list .row");
+    if (row) { const tt2 = row.dataset.t; if (e.metaKey || t.closest(".cb")) { picked.has(tt2) ? picked.delete(tt2) : picked.add(tt2); } focus = tt2; draw(); }
+  });
+  root.addEventListener("keydown", e => {
+    if (e.key === "Escape" && S.dlg) { S.dlg = null; draw(); }
+    if (S.view === "lib" && !S.dlg) {
+      if (e.key === "x" && focus) { picked.has(focus) ? picked.delete(focus) : picked.add(focus); draw(); }
+      if (e.key === "s" && picked.size) { S.dlg = "send"; draw(); }
+    }
+  });
+  draw();
+}
+
+let scale = 1;
+function fit() {
+  scale = Math.min(1, (innerWidth - 48) / 1280);
+  document.querySelectorAll("[data-fit]").forEach(el => {
+    el.style.transform = scale < 1 ? `scale(${scale})` : "";
+    el.style.marginLeft = scale < 1 ? "24px" : "";
+    el.style.marginBottom = scale < 1 ? `${-(el.offsetHeight * (1 - scale)) + 40}px` : "";
+  });
+}
+fit(); addEventListener("resize", fit);
+document.querySelectorAll(".frame").forEach(f => mount(f.querySelector(".win"), JSON.parse(f.dataset.init)));
+</script>
+</body>
+</html>

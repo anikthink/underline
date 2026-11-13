@@ -1,0 +1,9 @@
+.DS_Store
+# downloaded or generated, see the READMEs for how to get them back
+spikes/vendor-dl/
+spikes/azw3/.venv/
+spikes/azw3/books/
+spikes/azw3/out/
+spikes/azw3/unpacked/
+spikes/azw3/conv/epub2azw3
+spikes/anchors/books/
