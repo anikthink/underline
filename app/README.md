@@ -39,7 +39,9 @@ Tauri 2, Mac first. A Rust core (`src-tauri/`) keeps the library; the window (`s
 
 Not yet:
 - Edit details.
-- **Repeated short highlights:** on the generated test file, 240 of 250 Kindle highlights land on the right words. The 10 misses are two- or three-word phrases that occur more than once. Reading the words around each one from the AZW3 on the Kindle fixed this in spikes/anchors (250 of 250) and is the next step.
+- **Repeated short highlights:** for books Nightstand converted, the words around each Kindle highlight are read from the AZW3's own text near its location, and they pick the right place in the EPUB. On the generated test file that's 247 of 250 on exactly the right words (240 by location alone).
+  - The 3 misses are two-word phrases in Middlemarch. That file's locations drift up to 3,500 bytes from the AZW3's real text, because they were generated from KindleUnpack's rebuilt pages. A real Kindle counts the AZW3's own text, so a real My Clippings.txt is the check.
+  - Highlights in books bought from Amazon still use location alone.
 - **Kindle progress:** Kindles don't share reading positions for books sent over USB.
 - **Real devices:** this has been tested against pretend Kindle and Kobo folders, not real hardware.
 - Per-book Reader settings: the Reader's toolbar changes the defaults for now.

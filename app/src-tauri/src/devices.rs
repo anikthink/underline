@@ -478,3 +478,179 @@ mod tests {
         assert_eq!(kindle_clips(Path::new(&devs[1].path)).len(), 2);
     }
 }
+
+// ---------- The words around a Kindle highlight (spikes/anchors) ----------
+// A Kindle location is about byte (n − 1) × 150 of the book's text. For a book Nightstand converted, it has the
+// same AZW3, so it can find the highlight near that byte and note the words either side, which then pick the
+// right place in the EPUB even when a short phrase occurs many times.
+
+/// The text of a MOBI/KF8 file: its text records joined, trailing entries stripped, PalmDOC-decompressed if needed.
+pub fn kindle_text(p: &Path) -> Option<Vec<u8>> {
+    let f = std::fs::read(p).ok()?;
+    let be32 = |o: usize| -> Option<usize> { f.get(o..o + 4).map(|x| u32::from_be_bytes([x[0], x[1], x[2], x[3]]) as usize) };
+    let be16 = |o: usize| -> Option<usize> { f.get(o..o + 2).map(|x| u16::from_be_bytes([x[0], x[1]]) as usize) };
+    let n = be16(76)?;
+    let offs: Vec<usize> = (0..n).map(|i| be32(78 + 8 * i)).collect::<Option<_>>()?;
+    let r0 = offs[0];
+    let compression = be16(r0)?;
+    let count = be16(r0 + 8)?;
+    let header_len = if f.get(r0 + 16..r0 + 20)? == b"MOBI" { be32(r0 + 20)? } else { 0 };
+    let flags = if header_len >= 0xE4 { be16(r0 + 0xF2)? } else { 0 };
+    let mut out = vec![];
+    for i in 1..=count.min(n.saturating_sub(1)) {
+        let end = offs.get(i + 1).copied().unwrap_or(f.len());
+        let rec = f.get(offs[i]..end)?;
+        let rec = &rec[..rec.len() - trailing(rec, flags)];
+        match compression {
+            1 => out.extend_from_slice(rec),
+            2 => palmdoc(rec, &mut out),
+            _ => return None, // HUFF/CDIC: not something Nightstand writes
+        }
+    }
+    Some(out)
+}
+
+/// Size of the trailing entries at the end of a text record (KindleUnpack's getSizeOfTrailingDataEntries)
+fn trailing(rec: &[u8], flags: usize) -> usize {
+    let mut num = 0;
+    let mut f = flags >> 1;
+    while f != 0 {
+        if f & 1 != 0 {
+            let (mut size, mut bitpos, mut result) = (rec.len().saturating_sub(num), 0, 0usize);
+            while size > 0 {
+                let v = rec[size - 1] as usize;
+                result |= (v & 0x7F) << bitpos;
+                bitpos += 7;
+                size -= 1;
+                if v & 0x80 != 0 || bitpos >= 28 {
+                    break;
+                }
+            }
+            num += result;
+        }
+        f >>= 1;
+    }
+    if flags & 1 != 0 && rec.len() > num {
+        num += (rec[rec.len() - num - 1] as usize & 3) + 1;
+    }
+    num.min(rec.len())
+}
+
+fn palmdoc(rec: &[u8], out: &mut Vec<u8>) {
+    let start = out.len();
+    let mut i = 0;
+    while i < rec.len() {
+        let c = rec[i] as usize;
+        i += 1;
+        match c {
+            1..=8 => {
+                out.extend_from_slice(&rec[i..(i + c).min(rec.len())]);
+                i += c;
+            }
+            0x80..=0xBF if i < rec.len() => {
+                let pair = (c << 8) | rec[i] as usize;
+                i += 1;
+                let dist = (pair & 0x3FFF) >> 3;
+                let len = (pair & 7) + 3;
+                for _ in 0..len {
+                    let at = out.len().checked_sub(dist).filter(|&a| a >= start);
+                    out.push(at.map(|a| out[a]).unwrap_or(b' '));
+                }
+            }
+            0xC0..=0xFF => {
+                out.push(b' ');
+                out.push((c ^ 0x80) as u8);
+            }
+            _ => out.push(c as u8),
+        }
+    }
+}
+
+/// Letters and digits only, lower case, accents removed: the same folding as the window's (anchors.js)
+pub fn fold_with_offsets(raw: &[u8]) -> (Vec<char>, Vec<usize>) {
+    use unicode_normalization::UnicodeNormalization;
+    let text = String::from_utf8_lossy(raw);
+    let (mut chars, mut offs) = (vec![], vec![]);
+    let mut i = 0;
+    let b = text.as_bytes();
+    while i < b.len() {
+        if b[i] == b'<' {
+            i = text[i..].find('>').map(|j| i + j + 1).unwrap_or(b.len());
+            continue;
+        }
+        let (ch, len) = if b[i] == b'&' {
+            entity(&text[i..]).unwrap_or(('&', 1))
+        } else {
+            let c = text[i..].chars().next().unwrap();
+            (c, c.len_utf8())
+        };
+        for c in ch.to_string().nfkd() {
+            if c.is_alphanumeric() {
+                for l in c.to_lowercase() {
+                    chars.push(l);
+                    offs.push(i);
+                }
+            }
+        }
+        i += len;
+    }
+    (chars, offs)
+}
+
+fn entity(s: &str) -> Option<(char, usize)> {
+    let end = s[..s.len().min(12)].find(';')?;
+    let name = &s[1..end];
+    let c = match name {
+        "amp" => '&',
+        "lt" => '<',
+        "gt" => '>',
+        "quot" => '"',
+        "apos" => '\'',
+        "nbsp" => ' ',
+        _ if name.starts_with("#x") || name.starts_with("#X") => char::from_u32(u32::from_str_radix(&name[2..], 16).ok()?)?,
+        _ if name.starts_with('#') => char::from_u32(name[1..].parse().ok()?)?,
+        _ => return None,
+    };
+    Some((c, end + 1))
+}
+
+/// For each clip, the 40 folded characters before and after it in the Kindle's own text, found nearest its location.
+pub fn kindle_context(text: &(Vec<char>, Vec<usize>), clip_text: &str, location: i64) -> Option<(String, String)> {
+    let q: Vec<char> = fold_with_offsets(clip_text.as_bytes()).0;
+    if q.is_empty() {
+        return None;
+    }
+    let (chars, offs) = text;
+    let target = ((location - 1).max(0) * 150) as usize;
+    let mut best: Option<(usize, usize)> = None;
+    for i in 0..chars.len().saturating_sub(q.len() - 1) {
+        if chars[i] == q[0] && chars[i..i + q.len()] == q[..] {
+            let d = offs[i].abs_diff(target);
+            if best.is_none_or(|(_, bd)| d < bd) {
+                best = Some((i, d));
+            }
+        }
+    }
+    let (h, _) = best?;
+    let before: String = chars[h.saturating_sub(40)..h].iter().collect();
+    let after: String = chars[h + q.len()..(h + q.len() + 40).min(chars.len())].iter().collect();
+    Some((before, after))
+}
+
+#[cfg(test)]
+mod context_tests {
+    use super::*;
+
+    #[test]
+    fn reads_the_text_of_our_azw3() {
+        let p = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../../spikes/azw3/out/pg11.azw3"));
+        let Some(raw) = kindle_text(p) else { return };
+        let s = String::from_utf8_lossy(&raw);
+        assert!(s.contains("Curiouser and curiouser"), "{}", &s[..300.min(s.len())]);
+        let folded = fold_with_offsets(&raw);
+        let (before, after) = kindle_context(&folded, "Curiouser and curiouser!", 1).unwrap();
+        assert!(after.starts_with("criedalice"), "{after}");
+        assert!(!before.is_empty());
+    }
+}
+

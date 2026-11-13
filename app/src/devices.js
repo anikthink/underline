@@ -60,7 +60,7 @@ async function bringIn(d) {
     const chars = entry.sectionChars, before = chars?.map((_, i) => chars.slice(0, i).reduce((a, b) => a + b, 0))
     for (const c of list) {
       // Kindle: a location is about 150 bytes of the book's text; Kobo: the chapter file it was made in
-      const at = c.location ? { frac: Math.min(1, (c.location[0] - 1) * 150 / Math.max(1, ix.bytes)) } : c.chapterFile ? { file: c.chapterFile } : {}
+      const at = c.location ? { frac: Math.min(1, (c.location[0] - 1) * 150 / Math.max(1, ix.bytes)), context: c.context } : c.chapterFile ? { file: c.chapterFile } : {}
       const m = matchClip(ix, c.text, at)
       if (!m) { notFound.push(c); continue }
       const sec = book.sections[m.index], doc = m.range.startContainer.ownerDocument, body = doc.body ?? doc.documentElement

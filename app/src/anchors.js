@@ -62,7 +62,10 @@ export function matchClip(ix, text, at = {}) {
   if (!hits.length) return null
   const dist = ([s, h]) => at.file ? (s.href.endsWith(at.file) || at.file.endsWith(s.href) ? 0 : 1) + h / 1e9
     : at.frac != null ? Math.abs((s.start + h) / ix.total - at.frac) : 0
-  const [s, h] = hits.reduce((a, b) => dist(b) < dist(a) ? b : a)
+  // with the words around it on the device, the place whose surroundings agree most wins; position breaks ties
+  const ctx = at.context && (([s, h]) => agree(s.X.F.slice(Math.max(0, h - 40), h), at.context[0], true) + agree(s.X.F.slice(h + q.length, h + q.length + 40), at.context[1]))
+  const cost = x => (ctx ? -ctx(x) : 0) + dist(x)
+  const [s, h] = hits.reduce((a, b) => cost(b) < cost(a) ? b : a)
   const e = h + q.length - 1, range = s.doc.createRange()
   range.setStart(s.X.nodes[h], s.X.offs[h]); range.setEnd(s.X.nodes[e], s.X.offs[e] + 1)
   return { index: s.i, range, count: hits.length }

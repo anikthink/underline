@@ -279,6 +279,8 @@ struct DeviceClip {
     #[serde(flatten)]
     clip: devices::Clip,
     book_id: Option<i64>,
+    /// Kindle only, for books Nightstand converted: the folded words either side in the AZW3's own text
+    context: Option<(String, String)>,
 }
 
 /// Highlights on the device that haven't been brought in before, each with the library book it belongs to
@@ -291,6 +293,7 @@ async fn device_clips(lib: Lib<'_>, id: String) -> Result<Vec<DeviceClip>, Strin
     let seen = lib.imported_keys()?;
     let sent = lib.sent_to(&dev.id)?;
     let books = lib.books()?;
+    let mut texts: std::collections::HashMap<i64, Option<(Vec<char>, Vec<usize>)>> = Default::default();
     Ok(clips
         .into_iter()
         .filter(|c| !seen.contains(&c.key))
@@ -298,7 +301,16 @@ async fn device_clips(lib: Lib<'_>, id: String) -> Result<Vec<DeviceClip>, Strin
             let by_path = clip.path.as_ref().and_then(|p| sent.iter().find(|(s, _)| s == p)).map(|(_, b)| *b);
             let t = fold(&clip.title);
             let by_title = || books.iter().find(|b| !t.is_empty() && (fold(&b.title) == t || fold(&b.title).starts_with(&t) || t.starts_with(&fold(&b.title)))).map(|b| b.id);
-            DeviceClip { book_id: by_path.or_else(by_title), clip }
+            let book_id = by_path.or_else(by_title);
+            let context = match (book_id, clip.location) {
+                (Some(b), Some((loc, _))) => texts
+                    .entry(b)
+                    .or_insert_with(|| lib.azw3(b).and_then(|(f, _)| devices::kindle_text(&lib.folder.join(f))).map(|raw| devices::fold_with_offsets(&raw)))
+                    .as_ref()
+                    .and_then(|text| devices::kindle_context(text, &clip.text, loc)),
+                _ => None,
+            };
+            DeviceClip { book_id, clip, context }
         })
         .collect())
 }
