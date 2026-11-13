@@ -1,6 +1,8 @@
 // The library window: books grouped by status, adding books by dropping files or with Add books.
-import { openReader, closeReader } from './reader.js'
-import { initNotes, loadNotes, notesCount, renderNotes, notesTools, notesKey, revisitCard } from './notes.js'
+import { openReader, closeReader, reader } from './reader.js'
+import { initNotes, loadNotes, notesCount, renderNotes, notesTools, notesKey, revisitCard, allNotes, focusNote, focusBook } from './notes.js'
+import { initPalette, openPalette, paletteOpen } from './palette.js'
+import { loadSettings, setting } from './store.js'
 
 const { invoke, convertFileSrc } = window.__TAURI__.core
 const $ = id => document.getElementById(id)
@@ -105,7 +107,41 @@ window.__TAURI__.webview.getCurrentWebview().onDragDropEvent(({ payload }) => {
 })
 
 initNotes({ open, toast, render })
-document.addEventListener('keydown', e => { if (!$('library').hidden && filter === 'Notes') notesKey(e) })
 
+function go(place) { if (!$('reader').hidden) back(); filter = place; render() }
+initPalette({
+  books: () => books, notes: allNotes, readerBook: reader.book, view: reader.view,
+  openBook: (id, underline) => open(id, underline), closeReader: back, reader: reader.command, goToText: reader.goToText,
+  go, addBooks: chooseFiles, settings: () => invoke('open_settings'),
+  exportNotes: () => { go('Notes'); setTimeout(() => document.querySelector('[data-export="folder"]')?.click(), 50) },
+  notesAt: id => { go('Notes'); focusNote(id); render() },
+  notesFor: id => { go('Notes'); focusBook(id); render() },
+  setStatus: async (id, status) => { await invoke('set_status', { id, status }); await load(); toast(`Marked ${books.find(b => b.id === id)?.title} as ${status}.`) },
+  reveal: async id => { const b = books.find(b => b.id === id); window.__TAURI__.opener.revealItemInDir(`${await invoke('library_folder')}/${b.file}`) },
+})
+
+// app-wide keys: ⌘K, ⌘, and ⌘O anywhere; G then A, R, N, F or U in the library
+let gArmed = 0
+function shortcut(k) {
+  if (k === 'k') paletteOpen() ? null : openPalette()
+  if (k === ',') invoke('open_settings')
+  if (k === 'o' && !$('library').hidden) chooseFiles()
+}
+window.addEventListener('nightstand:shortcut', e => shortcut(e.detail))
+document.addEventListener('keydown', e => {
+  if (paletteOpen()) return
+  if (e.metaKey && ['k', ',', 'o'].includes(e.key)) { shortcut(e.key); return e.preventDefault() }
+  if ($('library').hidden || e.target.closest?.('input, textarea, .sheet')) return
+  if (!e.metaKey && !e.ctrlKey && Date.now() - gArmed < 1200) {
+    const place = { a: 'All books', r: 'Reading', n: 'Not started', f: 'Finished', u: 'Notes' }[e.key.toLowerCase()]
+    gArmed = 0
+    if (place) { go(place); return e.preventDefault() }
+  }
+  if (e.key === 'g' && !e.metaKey) { gArmed = Date.now(); return }
+  if (filter === 'Notes') notesKey(e)
+})
+
+await loadSettings()
 $('folder').textContent = (await invoke('library_folder')).replace(/^\/Users\/[^/]+/, '~')
-load()
+await load()
+if (setting('open_at') === 'book') { const last = books.filter(b => b.lastOpened).sort((a, b) => b.lastOpened - a.lastOpened)[0]; if (last) open(last.id) }

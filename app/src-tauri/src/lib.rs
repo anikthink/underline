@@ -5,7 +5,7 @@ mod notes;
 use library::{Added, Book, Library, Note, Underline};
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::{Manager, State, ipc::Response};
+use tauri::{Emitter, Manager, State, ipc::Response};
 
 type Lib<'a> = State<'a, Mutex<Library>>;
 
@@ -92,6 +92,54 @@ fn remove_underline(lib: Lib, id: i64) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn set_status(lib: Lib, id: i64, status: String) -> Result<(), String> {
+    lib.lock().unwrap().set_status(id, &status)
+}
+
+/// All settings as a map. Both windows read these; Settings changes them.
+#[tauri::command]
+fn get_settings(lib: Lib) -> Result<std::collections::HashMap<String, String>, String> {
+    Ok(lib.lock().unwrap().settings()?.into_iter().collect())
+}
+
+/// Change a setting (null removes it) and tell every window, so changes apply straight away.
+#[tauri::command]
+fn set_setting(app: tauri::AppHandle, lib: Lib, key: String, value: Option<String>) -> Result<(), String> {
+    lib.lock().unwrap().set_setting(&key, value.as_deref())?;
+    app.emit("setting-changed", (key, value)).map_err(|e| e.to_string())
+}
+
+/// The file Export to folder would write for the book with the most underlines, for the Settings preview.
+#[tauri::command]
+fn export_preview(lib: Lib) -> Result<Option<String>, String> {
+    let lib = lib.lock().unwrap();
+    let mut best: Option<(usize, Book, Vec<Underline>)> = None;
+    for b in lib.books()? {
+        let us = lib.underlines(b.id)?;
+        if !us.is_empty() && best.as_ref().is_none_or(|(n, ..)| us.len() > *n) {
+            best = Some((us.len(), b, us));
+        }
+    }
+    Ok(best.map(|(_, b, us)| notes::markdown(&b.title, &b.authors, &b.status, b.fraction, &us, "today".into())))
+}
+
+/// ⌘, : one Settings window, brought forward if it's already open
+#[tauri::command]
+fn open_settings(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(w) = app.get_webview_window("settings") {
+        return w.set_focus().map_err(|e| e.to_string());
+    }
+    tauri::WebviewWindowBuilder::new(&app, "settings", tauri::WebviewUrl::App("settings.html".into()))
+        .title("Settings")
+        .inner_size(760.0, 560.0)
+        .resizable(false)
+        .minimizable(false)
+        .build()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn list_notes(lib: Lib) -> Result<Vec<Note>, String> {
     lib.lock().unwrap().notes()
 }
@@ -166,6 +214,11 @@ pub fn run() {
             move_underline,
             remove_underline,
             set_note,
+            set_status,
+            get_settings,
+            set_setting,
+            export_preview,
+            open_settings,
             list_notes,
             export_settings,
             set_export,

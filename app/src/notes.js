@@ -20,6 +20,10 @@ export async function loadNotes() {
 }
 
 export const notesCount = () => all.length
+export const allNotes = () => all
+// from ⌘K: show one underline, or one book's underlines
+export function focusNote(id) { query = ''; chips.clear(); group = 'date'; editing = null; sel = Math.max(0, flat().findIndex(n => n.id === id)) }
+export function focusBook(bookId) { const n = all.find(n => n.bookId === bookId); query = n ? n.title : ''; chips.clear(); group = 'book'; sel = 0 }
 
 // ---------- Revisit ----------
 // A passage underlined over a month ago, never the one shown last. While nothing is that old yet, any passage will do.

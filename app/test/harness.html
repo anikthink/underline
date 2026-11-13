@@ -25,6 +25,7 @@ let db; try { db = fresh ? null : JSON.parse(localStorage.getItem(KEY)) } catch 
 db ??= structuredClone(seed)
 const save = () => localStorage.setItem(KEY, JSON.stringify(db))
 window.CALLS = []
+const listeners = []
 const handlers = {
   library_folder: () => '/Users/you/Books/Nightstand',
   list_books: () => structuredClone(db.books),
@@ -39,8 +40,13 @@ const handlers = {
   remove_underline: ({ id }) => { db.underlines = db.underlines.filter(u => u.id !== id) },
   set_note: ({ id, note }) => { db.underlines.find(u => u.id === id).note = note },
   list_notes: () => db.underlines.map(u => { const b = db.books.find(b => b.id === u.bookId); return { ...u, title: b.title, authors: b.authors, status: b.status, fraction: b.fraction } }).sort((a, b) => b.created - a.created || b.id - a.id),
-  export_settings: () => ({ folder: db.settings.folder ?? null, keep: !!db.settings.keep }),
-  set_export: ({ folder, keep }) => { db.settings = { folder, keep }; return { written: folder ? new Set(db.underlines.map(u => u.bookId)).size : 0, removed: 0, skipped: [] } },
+  export_settings: () => ({ folder: db.exp?.folder ?? null, keep: !!db.exp?.keep }),
+  export_preview: () => '---\ntitle: "Middlemarch"\n---',
+  get_settings: () => ({ ...db.settings }),
+  set_setting: ({ key, value }) => { if (value == null) delete db.settings[key]; else db.settings[key] = value; setTimeout(() => listeners.forEach(f => f({ payload: [key, value] }))) },
+  set_status: ({ id, status }) => { db.books.find(b => b.id === id).status = status },
+  open_settings: () => { window.SETTINGS_OPENED = (window.SETTINGS_OPENED ?? 0) + 1 },
+  set_export: ({ folder, keep }) => { db.exp = { folder, keep }; return { written: folder ? new Set(db.underlines.map(u => u.bookId)).size : 0, removed: 0, skipped: [] } },
 }
 window.__TAURI__ = {
   core: {
@@ -48,11 +54,18 @@ window.__TAURI__ = {
     convertFileSrc: p => p,
   },
   dialog: { open: async () => null },
+  event: { listen: async (name, f) => { listeners.push(f) } },
+  opener: { revealItemInDir: p => { window.REVEALED = p } },
   webview: { getCurrentWebview: () => ({ onDragDropEvent: () => {} }) },
 }
-const html = await (await fetch('../src/index.html')).text()
-document.body.innerHTML = new DOMParser().parseFromString(html, 'text/html').body.innerHTML
-await import('../src/app.js')
+// ?page=settings loads the Settings window instead of the main one
+const page = new URLSearchParams(location.search).get('page') ?? 'index'
+const dom = new DOMParser().parseFromString(await (await fetch(`../src/${page}.html`)).text(), 'text/html')
+for (const l of dom.querySelectorAll('link[rel=stylesheet]')) if (!l.href.endsWith('app.css')) document.head.append(Object.assign(document.createElement('link'), { rel: 'stylesheet', href: '../src/' + l.getAttribute('href') }))
+document.body.className = dom.body.className
+document.body.innerHTML = dom.body.innerHTML
+window.__TAURI__.window = { getCurrentWindow: () => ({ close: () => { window.CLOSED = true } }) }
+await import(page === 'index' ? '../src/app.js' : `../src/${page}.js`)
 window.READY = true
 </script>
 <body></body>

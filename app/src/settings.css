@@ -1,0 +1,25 @@
+/* The Settings window (prototypes/settings.html): tabs along the top, every change applies straight away */
+body.settings { overflow: auto; background: var(--bg); }
+.tabs { display: flex; justify-content: center; gap: 2px; padding: 10px 0 8px; border-bottom: 1px solid var(--ln); background: var(--raise); position: sticky; top: 0; z-index: 2; }
+.tabs button { border: 0; background: none; border-radius: 7px; padding: 6px 14px; color: var(--mu); font-size: 12px; }
+.tabs button.on { background: var(--sel); color: var(--tx); font-weight: 500; }
+.page { max-width: 600px; margin: 0 auto; padding: 18px 24px 40px; }
+.page h4 { font-size: 11px; color: var(--fa); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; margin: 22px 0 6px; }
+.sgrp { background: var(--panel); border: 1px solid var(--ln); border-radius: 10px; }
+.row { display: flex; align-items: center; gap: 16px; padding: 11px 14px; border-top: 1px solid var(--ln); }
+.row:first-child { border-top: 0; }
+.row .l { flex: 1; min-width: 0; }
+.row .d { color: var(--mu); font-size: 12px; margin-top: 2px; }
+.row select { border: 1px solid var(--ln2); border-radius: 6px; background: var(--panel); padding: 3px 6px; }
+.row input[type=range] { width: 160px; }
+.mono { font: 12px ui-monospace, Menlo, monospace; color: var(--tx2); word-break: break-all; }
+.preview { border-radius: 10px; padding: 22px 26px; border: 1px solid var(--ln); margin-bottom: 4px; line-height: 1.55; text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
+.preview[data-paper="day"] { background: #fbfaf7; color: #24221f; }
+.preview[data-paper="sepia"] { background: #f3ead8; color: #3b2f20; }
+.preview[data-paper="night"] { background: #141516; color: #d8d5ce; }
+.md { white-space: pre-wrap; font: 12px/1.55 ui-monospace, Menlo, monospace; background: var(--raise); border: 1px solid var(--ln); border-radius: 10px; padding: 14px 16px; max-height: 260px; overflow: auto; color: var(--tx2); -webkit-user-select: text; user-select: text; }
+.keys { width: 100%; border-collapse: collapse; }
+.keys td { padding: 7px 14px; border-top: 1px solid var(--ln); }
+.keys tr:first-child td { border-top: 0; }
+.keys td:last-child { text-align: right; font: 12px ui-monospace, Menlo, monospace; color: var(--mu); white-space: nowrap; }
+.note-box { color: var(--mu); padding: 14px; }

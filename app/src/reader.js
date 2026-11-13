@@ -3,6 +3,7 @@
 import { makeBook } from './vendor/foliate-js/view.js'
 import { Overlayer } from './vendor/foliate-js/overlayer.js'
 import { fold, findQuote } from './anchors.js'
+import { setting, setSetting, onSetting, darkNow } from './store.js'
 
 const { invoke } = window.__TAURI__.core
 const $ = id => document.getElementById(id)
@@ -13,8 +14,14 @@ const PAPERS = [['day', 'Day', '#24221f'], ['sepia', 'Sepia', '#3b2f20'], ['nigh
 const CHARS_PER_PAGE = 2000   // a page is 2,000 characters of text, whatever the font size (spikes/pages)
 const LARGE_FILE = 300 * 1024
 
-const prefs = (() => { try { return { size: 15, font: 'Georgia', paper: 'day', ...JSON.parse(localStorage.getItem('reader') ?? '{}') } } catch { return { size: 15, font: 'Georgia', paper: 'day' } } })()
-const savePrefs = () => { try { localStorage.setItem('reader', JSON.stringify(prefs)) } catch {} }
+// Reader settings live with the other settings (store.js), so the Settings window and the Reader share them.
+// Paper "match" follows the app: Day when it's light, Night when it's dark.
+const prefs = {
+  get size() { return +setting('reader_size') || 15 },
+  get font() { return FONTS[setting('reader_font')] ? setting('reader_font') : 'Georgia' },
+  get paper() { const p = setting('reader_paper'); return p === 'match' || !p ? (darkNow() ? 'night' : 'day') : p },
+}
+onSetting(k => { if (/^reader_|^theme$/.test(k) && entry) { paintTools(); relayout() } })
 
 let view, book, entry, before = [], totalPages = 0
 let readingAt = null        // CFI of a point just inside the first line, set only when the reader moves
@@ -252,8 +259,12 @@ $('pop').addEventListener('click', e => {
 
 // ---------- Keys and tools ----------
 function onKey(e) {
-  if (!view || $('reader').hidden) return
+  if (!view || $('reader').hidden || e.target.closest?.('#palette')) return
   const k = e.key
+  // keys pressed inside the book's page don't reach the window, so pass the app-wide shortcuts on
+  if (e.metaKey && ['k', ',', 'o'].includes(k) && e.target.ownerDocument !== document) {
+    window.dispatchEvent(new CustomEvent('nightstand:shortcut', { detail: k })); return e.preventDefault()
+  }
   if (/^[1-4]$/.test(k) && !e.metaKey) {
     if (popFor) relabel(popFor, +k); else if (selection) underlineSelection(+k)
     return e.preventDefault()
@@ -268,7 +279,7 @@ function onKey(e) {
 }
 document.addEventListener('keydown', onKey)
 
-function setSize(n) { prefs.size = Math.max(12, Math.min(28, n)); savePrefs(); paintTools(); relayout() }
+function setSize(n) { setSetting('reader_size', Math.max(12, Math.min(28, n))); paintTools(); relayout() }
 
 function paintTools() {
   $('size').textContent = prefs.size + ' pt'
@@ -278,8 +289,8 @@ function paintTools() {
 }
 $('smaller').addEventListener('click', () => setSize(prefs.size - 1))
 $('bigger').addEventListener('click', () => setSize(prefs.size + 1))
-$('font').addEventListener('change', e => { prefs.font = e.target.value; savePrefs(); relayout() })
-$('themes').addEventListener('click', e => { const b = e.target.closest('[data-paper]'); if (!b) return; prefs.paper = b.dataset.paper; savePrefs(); paintTools(); relayout() })
+$('font').addEventListener('change', e => { setSetting('reader_font', e.target.value); relayout() })
+$('themes').addEventListener('click', e => { const b = e.target.closest('[data-paper]'); if (!b) return; setSetting('reader_paper', b.dataset.paper); paintTools(); relayout() })
 document.addEventListener('pointerdown', e => { if (!e.target.closest('#pop')) hidePop() })
 
 // ---------- Contents ----------
@@ -294,3 +305,16 @@ function toggleContents() {
   toc.onclick = e => { const b = e.target.closest('[data-i]'); if (!b) return; toc.hidden = true; view.goTo(items[+b.dataset.i][0].href) }
 }
 $('contents').addEventListener('click', toggleContents)
+
+// ---------- For ⌘K ----------
+export const reader = {
+  book: () => (entry && !$('reader').hidden ? entry : null),
+  view: () => view,
+  command(c, arg) {
+    if (c === 'contents') toggleContents()
+    if (c === 'bigger') setSize(prefs.size + 1)
+    if (c === 'smaller') setSize(prefs.size - 1)
+    if (c === 'paper') { setSetting('reader_paper', arg); paintTools(); relayout() }
+  },
+  async goToText(cfi) { await view?.goTo(cfi); setTimeout(() => view?.clearSearch(), 4000) },
+}

@@ -20,8 +20,19 @@ Tauri 2, Mac first. A Rust core (`src-tauri/`) keeps the library; the window (`s
   - **Export:** Copy as Markdown copies what's on screen. Export to folder writes one Markdown file per book (frontmatter, chapters, labels as tags) and can keep it up to date. It's off until a folder is chosen, and it never touches files Nightstand didn't write.
   - **Empty states:** empty library views show a Revisit card.
 
+- **⌘K:** one box for books, underlines and commands. Every typed word must begin a word in the result.
+  - **In the library:** empty, it offers what you're reading, places and commands. Tab on a book lists what you can do with it (start or open, mark as Reading, Not started or Finished, see its underlines, Show in Finder).
+  - **In the Reader:** it's scoped to the open book and searches its whole text. ⌫ removes the scope. ↵ on a match goes there.
+  - **Opening an underline:** ↵ opens it in Notes; ⌘↵ opens the book at it.
+  - **G then A, R, N, F or U:** go to All books, Reading, Not started, Finished or Notes.
+- **Settings (⌘,):** a separate window with General (theme, what opens first), Library, Reader (defaults with a live preview), Notes (export folder and a preview of the file it writes), Devices and Shortcuts.
+  - Changes apply straight away, in both windows. Settings are stored in the library database.
+  - The four labels are fixed, and export is off until a folder is chosen.
+
 Not yet:
-- Devices, ⌘K, Settings and Edit details.
+- Devices (Settings says so) and Edit details.
+- Per-book Reader settings: the Reader's toolbar changes the defaults for now.
+- Moving the library folder.
 - Splitting very large book files. Books with a content file over 300 KB show a note that they may be slow.
 
 ## Running
@@ -60,5 +71,8 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
 - `src/reader.js` is the Reader.
 - `src/anchors.js` finds underlined words again.
 - `src/notes.js` is Notes.
+- `src/palette.js` is ⌘K.
+- `src/settings.html` and `src/settings.js` are the Settings window.
+- `src/store.js` holds settings shared between the windows.
 - `src-tauri/src/notes.rs` handles Markdown export.
 - `src/vendor/foliate-js` is foliate-js (MIT), with one small patch described in its `NIGHTSTAND.md`.

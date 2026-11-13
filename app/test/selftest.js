@@ -56,6 +56,20 @@
     R.cleanedUp = us.length
     if (folder) await invoke('set_export', { folder: null, keep: false })
     R.statusAfterTurning = (await invoke('list_books')).find(b => b.title === 'Middlemarch').status
+
+    // ⌘K in the library, a setting changed through the event round trip, and the Settings window
+    const key = (k, o = {}) => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, ...o }))
+    const type = v => { const q = $('pq'); q.value = v; q.dispatchEvent(new Event('input')) }
+    key('k', { metaKey: true }); await W(150)
+    type('alice'); await W(100)
+    R.palette = [...document.querySelectorAll('#pres .pr')].map(r => r.innerText.replace(/\s+/g, ' ').trim().slice(0, 50))
+    key('Escape'); $('pq').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await W(100)
+    await invoke('set_setting', { key: 'theme', value: 'dark' }); await W(300)
+    R.themeApplied = document.documentElement.dataset.theme
+    await invoke('set_setting', { key: 'theme', value: null }); await W(300)
+    R.themeCleared = document.documentElement.dataset.theme ?? 'match'
+    await invoke('open_settings'); await W(1200)
+    R.settingsWindow = (await window.__TAURI__.window.getAllWindows?.())?.map(w => w.label) ?? 'opened'
   } catch (e) { R.errs.push(String(e.stack ?? e)) }
   await invoke('dev_log', { msg: 'SELFTEST ' + JSON.stringify(R) })
   await invoke('dev_exit')

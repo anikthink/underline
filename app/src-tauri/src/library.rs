@@ -252,6 +252,19 @@ impl Library {
             .map_err(|e| e.to_string())
     }
 
+    pub fn set_status(&self, id: i64, status: &str) -> Result<(), String> {
+        if !["Reading", "Not started", "Finished"].contains(&status) {
+            return Err(format!("unknown status {status}"));
+        }
+        self.exec("update books set status = ? where id = ?", params![status, id])
+    }
+
+    pub fn settings(&self) -> Result<Vec<(String, String)>, String> {
+        let mut st = self.db.prepare("select key, value from settings").map_err(|e| e.to_string())?;
+        let rows = st.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(|e| e.to_string())?;
+        rows.collect::<Result<_, _>>().map_err(|e| e.to_string())
+    }
+
     pub fn set_section_chars(&self, id: i64, chars: &[u64]) -> Result<(), String> {
         self.db
             .execute("update books set section_chars = ? where id = ?", params![serde_json::to_string(chars).unwrap(), id])
