@@ -10,7 +10,17 @@ const KEY = 'harness-db', fresh = location.search.includes('fresh')
 const seed = { books: [
   { id: 1, title: 'Middlemarch', authors: ['George Eliot'], file: 'George Eliot/Middlemarch.epub', src: '../../spikes/azw3/books/pg145.epub', added: 1, cover: null, status: 'Not started', fraction: 0, position: null, sectionChars: null, largestFile: 26000, lastOpened: null },
   { id: 2, title: "Alice's Adventures in Wonderland", authors: ['Lewis Carroll'], file: 'Lewis Carroll/Alice.epub', src: '../../spikes/azw3/books/pg11.epub', added: 2, cover: null, status: 'Not started', fraction: 0, position: null, sectionChars: null, largestFile: 30000, lastOpened: null }],
-  underlines: [], next: 1 }
+  underlines: [], next: 100, settings: {} }
+// some underlines with bogus CFIs, so opening them also exercises finding the words again by quote
+const day = 86400, t = Math.floor(Date.now() / 1000)
+const U = (id, bookId, exact, label, page, chapter, age, note = '') => ({ id, bookId, cfi: 'epubcfi(/6/2!/4/2,/1:0,/1:1)', exact, prefix: '', suffix: '', label, note, created: t - age * day, page, chapter })
+seed.underlines = [
+  U(1, 1, 'We are all humiliated by the sudden discovery of a fact which has existed very comfortably', 2, 352, 'CHAPTER XXXV.', 70, 'Eliot describing confirmation bias a century before it had a name.'),
+  U(2, 1, 'the growing good of the world is partly dependent on unhistoric acts', 1, 903, 'FINALE.', 40),
+  U(3, 2, 'Curiouser and curiouser!', 1, 9, 'CHAPTER II.', 3),
+  U(4, 2, 'Who in the world am I? Ah, that’s the great puzzle!', 3, 10, 'CHAPTER II.', 0),
+  U(5, 1, 'When the animals entered the Ark in pairs', 4, 350, 'CHAPTER XXXV.', 1),
+]
 let db; try { db = fresh ? null : JSON.parse(localStorage.getItem(KEY)) } catch {}
 db ??= structuredClone(seed)
 const save = () => localStorage.setItem(KEY, JSON.stringify(db))
@@ -27,6 +37,10 @@ const handlers = {
   relabel_underline: ({ id, label }) => { db.underlines.find(u => u.id === id).label = label },
   move_underline: ({ id, cfi }) => { db.underlines.find(u => u.id === id).cfi = cfi },
   remove_underline: ({ id }) => { db.underlines = db.underlines.filter(u => u.id !== id) },
+  set_note: ({ id, note }) => { db.underlines.find(u => u.id === id).note = note },
+  list_notes: () => db.underlines.map(u => { const b = db.books.find(b => b.id === u.bookId); return { ...u, title: b.title, authors: b.authors, status: b.status, fraction: b.fraction } }).sort((a, b) => b.created - a.created || b.id - a.id),
+  export_settings: () => ({ folder: db.settings.folder ?? null, keep: !!db.settings.keep }),
+  set_export: ({ folder, keep }) => { db.settings = { folder, keep }; return { written: folder ? new Set(db.underlines.map(u => u.bookId)).size : 0, removed: 0, skipped: [] } },
 }
 window.__TAURI__ = {
   core: {

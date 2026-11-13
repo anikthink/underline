@@ -55,6 +55,23 @@ pub struct Underline {
     pub note: String,
     #[serde(default)]
     pub created: i64,
+    /// Page (2,000-character pages) and contents entry where it was made, for Notes and export
+    #[serde(default)]
+    pub page: Option<i64>,
+    #[serde(default)]
+    pub chapter: Option<String>,
+}
+
+/// An underline with the book it's in, for Notes
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Note {
+    #[serde(flatten)]
+    pub underline: Underline,
+    pub title: String,
+    pub authors: Vec<String>,
+    pub status: String,
+    pub fraction: f64,
 }
 
 fn now() -> i64 {
@@ -91,7 +108,14 @@ create table if not exists underlines (
   created integer not null
 );
 create index if not exists underlines_book on underlines(book_id);
+create table if not exists settings (key text primary key, value text not null);
+-- Markdown files Nightstand wrote when exporting, so it never touches anyone else's
+create table if not exists exported_files (book_id integer primary key, path text not null);
 ";
+
+// Columns added after the first version: (table, column, definition)
+const ADDED_COLUMNS: &[(&str, &str, &str)] = &[("underlines", "page", "integer"), ("underlines", "chapter", "text")];
+
 
 impl Library {
     pub fn open(folder: &Path) -> Result<Self, String> {
@@ -99,6 +123,14 @@ impl Library {
         let db = Connection::open(folder.join(".nightstand/library.sqlite")).map_err(|e| e.to_string())?;
         db.execute_batch("pragma foreign_keys = on; pragma journal_mode = wal;").map_err(|e| e.to_string())?;
         db.execute_batch(SCHEMA).map_err(|e| e.to_string())?;
+        for (table, col, def) in ADDED_COLUMNS {
+            let has: bool = db
+                .query_row(&format!("select count(*) from pragma_table_info('{table}') where name = ?"), [col], |r| r.get(0))
+                .map_err(|e| e.to_string())?;
+            if !has {
+                db.execute_batch(&format!("alter table {table} add column {col} {def}")).map_err(|e| e.to_string())?;
+            }
+        }
         Ok(Self { folder: folder.to_path_buf(), db })
     }
 
@@ -230,32 +262,72 @@ impl Library {
     pub fn underlines(&self, book_id: i64) -> Result<Vec<Underline>, String> {
         let mut st = self
             .db
-            .prepare("select id, book_id, cfi, exact, prefix, suffix, label, note, created from underlines where book_id = ? order by id")
+            .prepare(&format!("{UNDERLINE_SELECT} where book_id = ? order by id"))
+            .map_err(|e| e.to_string())?;
+        let rows = st.query_map([book_id], row_to_underline).map_err(|e| e.to_string())?;
+        rows.collect::<Result<_, _>>().map_err(|e| e.to_string())
+    }
+
+    /// Every underline in the library with its book, newest first
+    pub fn notes(&self) -> Result<Vec<Note>, String> {
+        let mut st = self
+            .db
+            .prepare(
+                "select u.id, u.book_id, u.cfi, u.exact, u.prefix, u.suffix, u.label, u.note, u.created, u.page, u.chapter,
+                        b.title, b.authors, b.status, b.fraction
+                 from underlines u join books b on b.id = u.book_id order by u.created desc, u.id desc",
+            )
             .map_err(|e| e.to_string())?;
         let rows = st
-            .query_map([book_id], |r| {
-                Ok(Underline {
-                    id: r.get(0)?,
-                    book_id: r.get(1)?,
-                    cfi: r.get(2)?,
-                    exact: r.get(3)?,
-                    prefix: r.get(4)?,
-                    suffix: r.get(5)?,
-                    label: r.get(6)?,
-                    note: r.get(7)?,
-                    created: r.get(8)?,
+            .query_map([], |r| {
+                Ok(Note {
+                    underline: row_to_underline(r)?,
+                    title: r.get(11)?,
+                    authors: serde_json::from_str(&r.get::<_, String>(12)?).unwrap_or_default(),
+                    status: r.get(13)?,
+                    fraction: r.get(14)?,
                 })
             })
             .map_err(|e| e.to_string())?;
         rows.collect::<Result<_, _>>().map_err(|e| e.to_string())
     }
 
+    pub fn book_of_underline(&self, id: i64) -> Result<i64, String> {
+        self.db.query_row("select book_id from underlines where id = ?", [id], |r| r.get(0)).map_err(|e| e.to_string())
+    }
+
+    pub fn setting(&self, key: &str) -> Option<String> {
+        self.db.query_row("select value from settings where key = ?", [key], |r| r.get(0)).optional().ok().flatten()
+    }
+
+    pub fn set_setting(&self, key: &str, value: Option<&str>) -> Result<(), String> {
+        match value {
+            Some(v) => self.exec("insert into settings (key, value) values (?, ?) on conflict(key) do update set value = excluded.value", params![key, v]),
+            None => self.exec("delete from settings where key = ?", params![key]),
+        }
+    }
+
+    pub fn exported_file(&self, book_id: i64) -> Option<String> {
+        self.db.query_row("select path from exported_files where book_id = ?", [book_id], |r| r.get(0)).optional().ok().flatten()
+    }
+
+    pub fn set_exported_file(&self, book_id: i64, path: Option<&str>) -> Result<(), String> {
+        match path {
+            Some(p) => self.exec("insert into exported_files (book_id, path) values (?, ?) on conflict(book_id) do update set path = excluded.path", params![book_id, p]),
+            None => self.exec("delete from exported_files where book_id = ?", params![book_id]),
+        }
+    }
+
+    pub fn is_exported_path(&self, path: &str) -> bool {
+        self.db.query_row("select 1 from exported_files where path = ?", [path], |_| Ok(())).optional().ok().flatten().is_some()
+    }
+
     pub fn add_underline(&self, u: &Underline) -> Result<Underline, String> {
         let created = now();
         self.db
             .execute(
-                "insert into underlines (book_id, cfi, exact, prefix, suffix, label, note, created) values (?, ?, ?, ?, ?, ?, ?, ?)",
-                params![u.book_id, u.cfi, u.exact, u.prefix, u.suffix, u.label, u.note, created],
+                "insert into underlines (book_id, cfi, exact, prefix, suffix, label, note, created, page, chapter) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                params![u.book_id, u.cfi, u.exact, u.prefix, u.suffix, u.label, u.note, created, u.page, u.chapter],
             )
             .map_err(|e| e.to_string())?;
         Ok(Underline { id: self.db.last_insert_rowid(), created, ..u.clone() })
@@ -265,9 +337,13 @@ impl Library {
         self.exec("update underlines set label = ? where id = ?", params![label, id])
     }
 
-    /// The words were found again somewhere else (the book file changed): store the new CFI.
-    pub fn move_underline(&self, id: i64, cfi: &str) -> Result<(), String> {
-        self.exec("update underlines set cfi = ? where id = ?", params![cfi, id])
+    /// The words were found again somewhere else (the book file changed): store the new CFI and page.
+    pub fn move_underline(&self, id: i64, cfi: &str, page: Option<i64>) -> Result<(), String> {
+        self.exec("update underlines set cfi = ?, page = coalesce(?, page) where id = ?", params![cfi, page, id])
+    }
+
+    pub fn set_note(&self, id: i64, note: &str) -> Result<(), String> {
+        self.exec("update underlines set note = ? where id = ?", params![note, id])
     }
 
     pub fn remove_underline(&self, id: i64) -> Result<(), String> {
@@ -277,6 +353,24 @@ impl Library {
     fn exec(&self, sql: &str, p: impl rusqlite::Params) -> Result<(), String> {
         self.db.execute(sql, p).map(|_| ()).map_err(|e| e.to_string())
     }
+}
+
+const UNDERLINE_SELECT: &str = "select id, book_id, cfi, exact, prefix, suffix, label, note, created, page, chapter from underlines";
+
+fn row_to_underline(r: &rusqlite::Row) -> rusqlite::Result<Underline> {
+    Ok(Underline {
+        id: r.get(0)?,
+        book_id: r.get(1)?,
+        cfi: r.get(2)?,
+        exact: r.get(3)?,
+        prefix: r.get(4)?,
+        suffix: r.get(5)?,
+        label: r.get(6)?,
+        note: r.get(7)?,
+        created: r.get(8)?,
+        page: r.get(9)?,
+        chapter: r.get(10)?,
+    })
 }
 
 const BOOK_SELECT: &str = "select id, title, authors, file, added, has_cover, status, fraction, position, section_chars, largest_file, last_opened from books";
@@ -342,6 +436,8 @@ mod tests {
                 label: 1,
                 note: "".into(),
                 created: 0,
+                page: Some(350),
+                chapter: Some("CHAPTER XXXV.".into()),
             })
             .unwrap();
         lib.relabel_underline(u.id, 3).unwrap();
@@ -350,6 +446,9 @@ mod tests {
         let us = lib.underlines(book.id).unwrap();
         assert_eq!(us.len(), 1);
         assert_eq!(us[0].label, 3);
+        assert_eq!(us[0].page, Some(350));
+        let notes = lib.notes().unwrap();
+        assert_eq!((notes[0].title.as_str(), notes[0].underline.id), ("Middlemarch", u.id));
         lib.remove_underline(u.id).unwrap();
         assert!(lib.underlines(book.id).unwrap().is_empty());
     }

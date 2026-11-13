@@ -16,7 +16,9 @@
     // only opening a book doesn't start it
     $('back').click(); await W(500)
     R.statusAfterJustOpening = (await invoke('list_books')).find(b => b.title === 'Middlemarch').status
-    card.click(); for (let i = 0; i < 150 && !document.querySelector('foliate-view')?.lastLocation; i++) await W(50); await W(300)
+    // the shelf was redrawn on the way back, so find the card again
+    document.querySelector('.bk[title="Middlemarch"]').click()
+    for (let i = 0; i < 150 && !(document.querySelector('foliate-view')?.lastLocation && /^p\./.test($('page').textContent)); i++) await W(50)
     const v = document.querySelector('foliate-view')
     await W(300)
     const flat = []; const walk = l => l?.forEach(x => { flat.push(x); walk(x.subitems) }); walk(v.book.toc)
@@ -40,9 +42,19 @@
     $('back').click(); await W(800)
     document.querySelector('.bk[title="Middlemarch"]').click(); await W(2500)
     R.reopened = { page: $('page').textContent, sameScreen: words().slice(0, 40) === a }
+    // Notes and export, into a throwaway folder given by NIGHTSTAND_EXPORT_TEST
+    $('back').click(); await W(800)
+    document.querySelector('[data-f="Notes"]').click(); await W(400)
+    R.notes = { rows: document.querySelectorAll('.nt').length, revisit: !!document.querySelector('.rv'), first: document.querySelector('.nt .nm')?.textContent }
+    const folder = window.EXPORT_TEST
+    if (folder) {
+      R.exported = await invoke('set_export', { folder, keep: true })
+      await invoke('relabel_underline', { id: (await invoke('list_underlines', { bookId: book.id }))[0].id, label: 2 })
+    }
     us = await invoke('list_underlines', { bookId: book.id })
     for (const u of us) await invoke('remove_underline', { id: u.id })
     R.cleanedUp = us.length
+    if (folder) await invoke('set_export', { folder: null, keep: false })
     R.statusAfterTurning = (await invoke('list_books')).find(b => b.title === 'Middlemarch').status
   } catch (e) { R.errs.push(String(e.stack ?? e)) }
   await invoke('dev_log', { msg: 'SELFTEST ' + JSON.stringify(R) })

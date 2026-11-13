@@ -32,7 +32,8 @@ const css = () => `
   a { color: inherit; }
   ::selection { background: rgba(94,106,210,.25); }`
 
-export async function openReader(b) {
+// target: an underline id to open at, instead of where the reader left off
+export async function openReader(b, target) {
   entry = b; turned = false
   $('rtitle').textContent = `${b.title} · ${b.authors[0] ?? ''}`
   $('note').textContent = b.largestFile > LARGE_FILE ? 'This book is stored as one large file, so it can be slow.' : ''
@@ -56,13 +57,15 @@ export async function openReader(b) {
   view.addEventListener('show-annotation', e => showUnderlineMenu(e.detail))
 
   await countPages()
-  try { if (b.position) await view.goTo(b.position); else await view.goToTextStart() }
+  // check underlines first, so opening at one uses its repaired CFI
+  underlines = await invoke('list_underlines', { bookId: b.id })
+  await placeUnderlines()
+  const at = target != null ? underlines.find(u => u.id === target && u.index != null)?.cfi : b.position
+  try { if (at) await view.goTo(at); else await view.goToTextStart() }
   catch { await view.goToTextStart() }
 
   resizeObs = new ResizeObserver(() => { clearTimeout(resizeObs.t); resizeObs.t = setTimeout(() => relayout(), 150) })
   resizeObs.observe($('stage'))
-  underlines = await invoke('list_underlines', { bookId: b.id })
-  placeUnderlines()
 }
 
 export async function closeReader() {
@@ -135,18 +138,19 @@ const byIndex = new Map()   // section index -> underlines placed in it
 async function placeUnderlines() {
   byIndex.clear()
   let lost = 0
+  const docs = new Map(), docOf = async i => docs.get(i) ?? docs.set(i, await book.sections[i].createDocument()).get(i)
   for (const u of underlines) {
     let index, ok = false
     try {
       const res = view.resolveCFI(u.cfi); index = res.index
-      const doc = await book.sections[index].createDocument()
+      const doc = await docOf(index)
       ok = fold(res.anchor(doc).toString()) === fold(u.exact)
     } catch {}
     if (!ok) {
       const found = await findQuote(book, u, index ?? 0)
       if (!found) { lost++; continue }
       index = found.index; u.cfi = view.getCFI(index, found.range)
-      invoke('move_underline', { id: u.id, cfi: u.cfi })
+      invoke('move_underline', { id: u.id, cfi: u.cfi, page: pageOf(index, found.range) })
     }
     u.index = index
     if (!byIndex.has(index)) byIndex.set(index, [])
@@ -174,7 +178,8 @@ async function underlineSelection(label) {
   if (!exact.trim()) return
   const u = await invoke('add_underline', { underline: {
     bookId: entry.id, cfi: view.getCFI(index, range), exact,
-    prefix: text.slice(Math.max(0, at - 48), at), suffix: text.slice(at + exact.length, at + exact.length + 48), label } })
+    prefix: text.slice(Math.max(0, at - 48), at), suffix: text.slice(at + exact.length, at + exact.length + 48), label,
+    page: pageOf(index, range), chapter: view.lastLocation?.tocItem?.label?.trim() ?? null } })
   u.index = index; underlines.push(u)
   if (!byIndex.has(index)) byIndex.set(index, [])
   byIndex.get(index).push(u)

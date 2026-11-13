@@ -1,5 +1,6 @@
 // The library window: books grouped by status, adding books by dropping files or with Add books.
 import { openReader, closeReader } from './reader.js'
+import { initNotes, loadNotes, notesCount, renderNotes, notesTools, notesKey, revisitCard } from './notes.js'
 
 const { invoke, convertFileSrc } = window.__TAURI__.core
 const $ = id => document.getElementById(id)
@@ -9,7 +10,7 @@ const STATUSES = ['Reading', 'Not started', 'Finished']
 let books = [], filter = 'All books'
 
 async function load() {
-  books = await invoke('list_books')
+  [books] = await Promise.all([invoke('list_books'), loadNotes()])
   render()
 }
 
@@ -17,12 +18,25 @@ function render() {
   const counts = Object.fromEntries(STATUSES.map(s => [s, books.filter(b => b.status === s).length]))
   $('filters').innerHTML = ['All books', ...STATUSES].map(f =>
     `<button class="fl ${f === filter ? 'on' : ''}" data-f="${f}"><span>${f}</span><span class="n">${f === 'All books' ? books.length : counts[f]}</span></button>`).join('')
+    + `<div class="fsep"></div><button class="fl ${filter === 'Notes' ? 'on' : ''}" data-f="Notes"><span>Notes</span><span class="n">${notesCount()}</span></button>`
   $('heading').textContent = filter
+  const notes = filter === 'Notes'
+  if ($('tools').dataset.view !== (notes ? 'notes' : 'books')) {
+    $('tools').dataset.view = notes ? 'notes' : 'books'
+    $('tools').innerHTML = notes ? notesTools() : '<button id="add" class="btn">Add books…</button>'
+  }
+  if (notes) return renderNotes()
   if (!books.length) {
     $('shelf').innerHTML = `<div class="empty"><h2>No books yet</h2><p>Drop EPUB files anywhere in this window, or choose them. They're copied into your library folder; the originals stay where they are.</p><button class="btn pri" data-add>Add books…</button></div>`
     return
   }
   const groups = (filter === 'All books' ? STATUSES : [filter]).map(s => [s, books.filter(b => b.status === s)]).filter(([, l]) => l.length)
+  if (!groups.length) {
+    // an empty view offers the next step and a passage from your underlines (prototypes/notes.html, frame 05)
+    const next = filter === 'Reading' ? 'Nothing in progress. Pick something from Not started.' : filter === 'Finished' ? 'No finished books yet.' : 'Nothing here yet.'
+    $('shelf').innerHTML = `<div class="empty"><h2>${next}</h2>${revisitCard(true)}</div>`
+    return
+  }
   $('shelf').innerHTML = groups.map(([s, list]) => `
     <div class="grp">${s}<span class="n">${list.length}</span></div>
     <div class="grid">${list.map(card).join('')}</div>`).join('')
@@ -69,10 +83,10 @@ document.addEventListener('click', e => {
   const b = e.target.closest('.bk[data-id]'); if (b) open(+b.dataset.id)
 })
 
-async function open(id) {
+async function open(id, target) {
   const book = books.find(b => b.id === id)
   $('library').hidden = true; $('reader').hidden = false
-  try { await openReader(book) } catch (e) { console.error(e); toast(`Couldn't open ${book.title}: ${e}`); back() }
+  try { await openReader(book, target) } catch (e) { console.error(e); toast(`Couldn't open ${book.title}: ${e}`); back() }
 }
 async function back() {
   await closeReader()
@@ -89,6 +103,9 @@ window.__TAURI__.webview.getCurrentWebview().onDragDropEvent(({ payload }) => {
   else $('drop').hidden = true
   if (payload.type === 'drop') addPaths(payload.paths)
 })
+
+initNotes({ open, toast, render })
+document.addEventListener('keydown', e => { if (!$('library').hidden && filter === 'Notes') notesKey(e) })
 
 $('folder').textContent = (await invoke('library_folder')).replace(/^\/Users\/[^/]+/, '~')
 load()

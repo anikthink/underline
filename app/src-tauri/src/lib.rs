@@ -1,7 +1,8 @@
 mod epub;
 mod library;
+mod notes;
 
-use library::{Added, Book, Library, Underline};
+use library::{Added, Book, Library, Note, Underline};
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{Manager, State, ipc::Response};
@@ -47,24 +48,63 @@ fn list_underlines(lib: Lib, book_id: i64) -> Result<Vec<Underline>, String> {
     lib.lock().unwrap().underlines(book_id)
 }
 
+// Every change to an underline also refreshes the exported Markdown when "Keep up to date" is on.
+
 #[tauri::command]
 fn add_underline(lib: Lib, underline: Underline) -> Result<Underline, String> {
-    lib.lock().unwrap().add_underline(&underline)
+    let lib = lib.lock().unwrap();
+    let u = lib.add_underline(&underline)?;
+    notes::after_change(&lib, u.book_id);
+    Ok(u)
 }
 
 #[tauri::command]
 fn relabel_underline(lib: Lib, id: i64, label: i64) -> Result<(), String> {
-    lib.lock().unwrap().relabel_underline(id, label)
+    let lib = lib.lock().unwrap();
+    lib.relabel_underline(id, label)?;
+    notes::after_change(&lib, lib.book_of_underline(id)?);
+    Ok(())
 }
 
 #[tauri::command]
-fn move_underline(lib: Lib, id: i64, cfi: String) -> Result<(), String> {
-    lib.lock().unwrap().move_underline(id, &cfi)
+fn set_note(lib: Lib, id: i64, note: String) -> Result<(), String> {
+    let lib = lib.lock().unwrap();
+    lib.set_note(id, &note)?;
+    notes::after_change(&lib, lib.book_of_underline(id)?);
+    Ok(())
+}
+
+#[tauri::command]
+fn move_underline(lib: Lib, id: i64, cfi: String, page: Option<i64>) -> Result<(), String> {
+    let lib = lib.lock().unwrap();
+    lib.move_underline(id, &cfi, page)?;
+    notes::after_change(&lib, lib.book_of_underline(id)?);
+    Ok(())
 }
 
 #[tauri::command]
 fn remove_underline(lib: Lib, id: i64) -> Result<(), String> {
-    lib.lock().unwrap().remove_underline(id)
+    let lib = lib.lock().unwrap();
+    let book = lib.book_of_underline(id)?;
+    lib.remove_underline(id)?;
+    notes::after_change(&lib, book);
+    Ok(())
+}
+
+#[tauri::command]
+fn list_notes(lib: Lib) -> Result<Vec<Note>, String> {
+    lib.lock().unwrap().notes()
+}
+
+#[tauri::command]
+fn export_settings(lib: Lib) -> notes::ExportSettings {
+    notes::settings(&lib.lock().unwrap())
+}
+
+/// Set the export folder (null turns export off) and "Keep up to date", then write every book's file.
+#[tauri::command]
+fn set_export(lib: Lib, folder: Option<String>, keep: bool) -> Result<notes::Report, String> {
+    notes::configure(&lib.lock().unwrap(), folder.as_deref(), keep)
 }
 
 /// Debug builds only: NIGHTSTAND_SELFTEST=path/to/test.js runs that script in the window
@@ -101,7 +141,10 @@ pub fn run() {
             app.manage(Mutex::new(lib));
             #[cfg(debug_assertions)]
             if let Ok(path) = std::env::var("NIGHTSTAND_SELFTEST") {
-                let js = std::fs::read_to_string(&path)?;
+                let mut js = std::fs::read_to_string(&path)?;
+                if let Ok(dir) = std::env::var("NIGHTSTAND_EXPORT_TEST") {
+                    js = format!("window.EXPORT_TEST = {};\n{js}", serde_json::to_string(&dir)?);
+                }
                 let win = app.get_webview_window("main").ok_or("no main window")?;
                 std::thread::spawn(move || {
                     std::thread::sleep(std::time::Duration::from_millis(1500));
@@ -122,6 +165,10 @@ pub fn run() {
             relabel_underline,
             move_underline,
             remove_underline,
+            set_note,
+            list_notes,
+            export_settings,
+            set_export,
             dev_log,
             dev_exit
         ])

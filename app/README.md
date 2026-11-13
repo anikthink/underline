@@ -13,8 +13,15 @@ Tauri 2, Mac first. A Rust core (`src-tauri/`) keeps the library; the window (`s
 - **Underlines:** select text, then press 1–4 or click the label: Quote, Idea, Question, Disagree. Click an underline to change its label or remove it (⌫).
 - **Underline storage:** each one is stored as a CFI plus its quote, and checked when the book opens. If the words have moved, they're found by the quote and the CFI is updated (spikes/anchors).
 
+- **Notes:** every underline from every book in one place.
+  - **Revisit:** a passage from over a month ago, never the same one twice in a row. R picks another.
+  - **Grouping and filters:** group by date, book (with a bar of each book's labels) or label; filter with the label chips and search (/).
+  - **Keys:** J/K to move, ↵ to open in the book at that underline, 1–4 to relabel, N for a note, C to copy.
+  - **Export:** Copy as Markdown copies what's on screen. Export to folder writes one Markdown file per book (frontmatter, chapters, labels as tags) and can keep it up to date. It's off until a folder is chosen, and it never touches files Nightstand didn't write.
+  - **Empty states:** empty library views show a Revisit card.
+
 Not yet:
-- Notes, Devices, ⌘K, Settings and Edit details.
+- Devices, ⌘K, Settings and Edit details.
 - Splitting very large book files. Books with a content file over 300 KB show a note that they may be slow.
 
 ## Running
@@ -37,7 +44,10 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
   - opens Middlemarch;
   - underlines with key 1;
   - changes the size there and back, then reopens the book;
+  - checks Notes;
   - removes its underline, prints a JSON report and quits.
+
+  With `NIGHTSTAND_EXPORT_TEST=/some/empty/folder`, it also exports there and checks that removing the underline removes the file.
 
   This only works in debug builds.
 
@@ -49,4 +59,6 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
 - `src/app.js` is the library window.
 - `src/reader.js` is the Reader.
 - `src/anchors.js` finds underlined words again.
+- `src/notes.js` is Notes.
+- `src-tauri/src/notes.rs` handles Markdown export.
 - `src/vendor/foliate-js` is foliate-js (MIT), with one small patch described in its `NIGHTSTAND.md`.
