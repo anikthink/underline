@@ -1,0 +1,118 @@
+<!doctype html><meta charset="utf-8"><title>Pages check</title>
+<style>
+body{font:12px system-ui;margin:0;display:flex;gap:12px;padding:12px;background:#ddd}
+#stage{width:900px;height:680px;background:#fbf8f2;flex:none;position:relative}
+foliate-view{display:block;width:100%;height:100%}
+#pg{position:absolute;bottom:8px;left:0;right:0;text-align:center;font:12px system-ui;color:#777}
+pre{white-space:pre-wrap;margin:0;flex:1}
+</style>
+<div id="stage"><div id="pg"></div></div><pre id="out">running…</pre>
+<script type="module">
+import '../vendor-dl/foliate-js-main/view.js'
+import { makeBook } from '../vendor-dl/foliate-js-main/view.js'
+const q = new URLSearchParams(location.search), file = q.get('book') ?? 'pg145', KEEP = q.has('keep')
+const out = document.getElementById('out'), pg = document.getElementById('pg')
+const stage = x => out.textContent = 'running… ' + x + ' ' + Math.round(performance.now() / 1000) + 's'
+addEventListener('error', e => out.textContent += ' ERR ' + e.message); addEventListener('unhandledrejection', e => out.textContent += ' REJ ' + (e.reason?.stack ?? e.reason))
+const now = () => performance.now(), R = { book: file, keepFirstWord: KEEP, timing: q.get("frames") === "0" ? "until layout" : "until painted", ua: navigator.userAgent.match(/(Chrome|Version)\/[\d.]+.*?(Safari)?/)?.[0] }
+const css = pt => `html{font-size:${pt}pt}body{font-family:Georgia,serif;line-height:1.5}p{text-align:justify;hyphens:auto;-webkit-hyphens:auto;margin:0;text-indent:1.4em}`
+const CHARS_PER_PAGE = 2000   // the fixed "page": 2,000 characters of text, whatever the font size
+
+stage('fetch'); let t = now()
+const book = await makeBook(new File([await (await fetch(`books/${file}.epub`)).blob()], file + '.epub'))
+const view = document.createElement('foliate-view')
+document.getElementById('stage').prepend(view)
+await view.open(book)
+stage('opened')
+const r = view.renderer
+r.setAttribute('flow', 'paginated'); r.setAttribute('max-column-count', '1'); r.setAttribute('margin', '44px'); r.setAttribute('max-inline-size', '620px'); r.setAttribute('gap', '8%')
+r.setStyles(css(15))
+R.openMs = Math.round(now() - t)
+const tStart = t
+
+stage('count')
+// Count the text in every chapter once. The app would do this when a book is added and keep it.
+t = now()
+const sizes = []
+for (const s of book.sections) { const d = await s.createDocument(); sizes.push(s.linear === 'no' ? 0 : (d.body?.textContent.length ?? 0)) }
+const before = sizes.map((_, i) => sizes.slice(0, i).reduce((a, b) => a + b, 0)), total = before.at(-1) + sizes.at(-1)
+R.countMs = Math.round(now() - t); R.totalPages = Math.ceil(total / CHARS_PER_PAGE); R.chars = total
+
+const relocated = (ms = 8000) => new Promise(res => { const f = e => { clearTimeout(to); view.removeEventListener('relocate', f); res(e.detail) }; const to = setTimeout(() => { view.removeEventListener('relocate', f); res(null) }, ms); view.addEventListener('relocate', f) })
+// Page number of the first word on screen
+const where = () => {
+  const L = view.lastLocation, { index } = view.resolveCFI(L.cfi), rg = L.range, doc = rg.startContainer.ownerDocument
+  const x = doc.createRange(); x.setStart(doc.body, 0); x.setEnd(rg.startContainer, rg.startOffset)
+  const off = before[index] + x.toString().length
+  return { index, off, page: Math.floor(off / CHARS_PER_PAGE) + 1, cfi: L.cfi, words: rg.toString().trim().split(/\s+/).slice(0, 5).join(' ') }
+}
+// wait for two frames; WebKit sometimes never runs frame callbacks here, so give up after 1 s and count it
+let noFrame = 0
+// frames=0: time until layout is done (forced by reading a size) instead of waiting for frames
+const FRAMES = q.get('frames') !== '0'
+const painted = () => FRAMES ? framed() : Promise.resolve(void r.getContents().map(c => c.doc.documentElement.scrollWidth + c.doc.body.getBoundingClientRect().height))
+const framed = () => Promise.race([new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true)))), new Promise(r => setTimeout(() => r(false), 1000))]).then(ok => { if (!ok) noFrame++ })
+const show = () => { const w = where(); pg.textContent = `p. ${w.page} of ${R.totalPages}`; return w }
+
+stage('goto')
+// open at chapter 35, like the Reader prototype
+const flat = []; const walk = l => l?.forEach(x => { flat.push(x); walk(x.subitems) }); walk(book.toc)
+const ch = flat.find(x => /^CHAPTER XXXV\.?$/i.test(x.label.trim()))
+t = now(); let p = relocated(); await view.goTo(ch?.href ?? 0); await p; await painted()
+R.firstPageMs = Math.round(now() - t); R.fileToFirstPageMs = Math.round(now() - tStart - R.countMs); R.openedAt = { toc: ch?.label, ...show() }
+
+// change size 15 -> 24 -> 15 at the chapter and at 8 other places
+const settle = () => new Promise(r => setTimeout(r, 1500))
+// does the screen still show the words that were first on it before the change?
+const stillShows = (txt, rg) => rg.toString().replace(/\s+/g, ' ').includes(txt)
+// keep=1: the app's fix. Remember the first word on screen when the reader last moved
+// (a page turn or a jump), and go back to that word after any layout change.
+// Size changes don't move the remembered word, so 15 -> 24 -> 15 comes back exactly.
+let readingAt = null
+// called after the reader moves; layout events never call it
+// The very first character can sit exactly on the edge between two screens, so use one a little way into the first line.
+const mark = () => {
+  const L = view.lastLocation, x = L.range.cloneRange(); x.collapse(true)
+  const n = x.startContainer
+  if (n.nodeType === 3 && n.length > x.startOffset + 12) x.setStart(n, x.startOffset + 12), x.collapse(true)
+  readingAt = view.getCFI(view.resolveCFI(L.cfi).index, x)
+}
+const setSize = async pt => {
+  const t0 = now()
+  p = relocated(); r.setStyles(css(pt)); await p
+  if (KEEP) { p = relocated(); await view.goTo(readingAt); await p }
+  await painted(); const ms = now() - t0
+  return ms
+}
+const sizeTrip = async () => {
+  await settle(); mark(); const a = show(), first = view.lastLocation.range.toString().replace(/\s+/g, ' ').trim().slice(0, 30)
+  const big = await setSize(24)
+  await settle(); const b = show(), kept24 = stillShows(first, view.lastLocation.range)
+  const back = await setSize(15)
+  await settle(); const c = show(), kept15 = stillShows(first, view.lastLocation.range)
+  return { at: a.page, at24: b.page, back: c.page, sameWords: a.cfi === c.cfi, firstWordsStillOnScreen24: kept24, firstWordsStillOnScreen15: kept15, ms24: Math.round(big), ms15: Math.round(back), words: first, words24: b.words }
+}
+stage('sizes'); R.sizes = [await sizeTrip()]
+for (const f of [0.05, 0.17, 0.31, 0.44, 0.58, 0.69, 0.83, 0.96]) { p = relocated(); await view.goToFraction(f); await p; R.sizes.push(await sizeTrip()); stage('sizes ' + R.sizes.length) }
+
+// page turns at 15 and 24 pt, from chapter 35
+const turns = async (pt, n) => {
+  p = relocated(); r.setStyles(css(pt)); await p
+  p = relocated(); await view.goTo(ch?.href ?? 0); await p
+  const ms = [], cross = [], pages = [show().page]; let idx = where().index, back = 0
+  for (let i = 0; i < n; i++) {
+    // time until the new page is on screen; foliate then waits 100 ms before taking the next turn
+    const t1 = now(); p = relocated(); const turn = view.next(); await p; await painted(); const d = now() - t1; await turn
+    const w = show(); (w.index !== idx ? cross : ms).push(d); idx = w.index
+    if (w.page < pages.at(-1)) back++; pages.push(w.page)
+  }
+  ms.sort((a, b) => a - b); cross.sort((a, b) => a - b)
+  const jumps = pages.slice(1).map((x, i) => x - pages[i])
+  return { pt, turns: n, medianMs: Math.round(ms[ms.length >> 1]), p95Ms: Math.round(ms[Math.floor(ms.length * .95)]), maxMs: Math.round(ms.at(-1)), chapterChanges: cross.length, chapterChangeMaxMs: Math.round(cross.at(-1) ?? 0), screensPerPage: +(n / (pages.at(-1) - pages[0])).toFixed(2), biggestJump: Math.max(...jumps), wentBackwards: back, from: pages[0], to: pages.at(-1) }
+}
+stage('turns'); R.turns15 = await turns(15, 80)
+R.turns24 = await turns(24, 80)
+p = relocated(); r.setStyles(css(15)); await p; p = relocated(); await view.goTo(ch?.href ?? 0); await p; show()
+R.framesNeverCame = noFrame
+out.textContent = JSON.stringify(R, null, 1); window.RESULT = R
+</script>
