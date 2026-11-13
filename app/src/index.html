@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nightstand</title>
+  <link rel="stylesheet" href="app.css" />
+  <script type="module" src="app.js" defer></script>
+</head>
+<body>
+  <div id="library" class="view">
+    <aside class="side">
+      <div class="drag" data-tauri-drag-region></div>
+      <div class="brand">
+        <svg class="lg" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="7" fill="#222b5e"/><circle cx="15" cy="15" r="6.6" fill="#f2b544"/><path d="M0 21.3h30V23a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7z" fill="#0f1331"/><rect x="5.7" y="17.1" width="18.6" height="4.2" rx=".7" fill="#5767b8"/><rect x="6.6" y="18.15" width="17.7" height="2.1" fill="#f1e9d8"/></svg>
+        <span>Nightstand</span>
+      </div>
+      <nav id="filters"></nav>
+      <div class="foot">
+        <div class="lab">Library folder</div>
+        <div id="folder" class="path"></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="bar" data-tauri-drag-region>
+        <h1 id="heading" data-tauri-drag-region>All books</h1>
+        <button id="add" class="btn">Add books…</button>
+      </header>
+      <div id="shelf" class="shelf"></div>
+      <div id="toast" class="toast" hidden></div>
+    </main>
+    <div id="drop" class="drop" hidden><div>Drop EPUB files to add them</div></div>
+  </div>
+
+  <div id="reader" class="view" hidden>
+    <header class="rbar" data-tauri-drag-region>
+      <div class="rleft"><button id="back" class="rbtn" title="Library (Esc)">‹ Library</button><button id="contents" class="rbtn" title="Contents (⌘T)">Contents</button></div>
+      <div id="rtitle" class="rtitle" data-tauri-drag-region></div>
+      <div class="rtools">
+        <button id="smaller" class="rbtn" title="Smaller (⌘−)">A−</button>
+        <span id="size" class="rsize"></span>
+        <button id="bigger" class="rbtn" title="Bigger (⌘+)">A+</button>
+        <select id="font" class="rsel" title="Font"></select>
+        <div id="themes" class="seg" title="Paper"></div>
+      </div>
+    </header>
+    <div id="stage" class="stage"></div>
+    <footer class="rfoot">
+      <span id="chapter"></span>
+      <span id="note" class="rnote"></span>
+      <span id="page"></span>
+    </footer>
+    <nav id="toc" class="toc" hidden></nav>
+    <div id="pop" class="pop" hidden></div>
+  </div>
+</body>
+</html>

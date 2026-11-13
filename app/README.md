@@ -1,0 +1,52 @@
+# Nightstand app
+
+Tauri 2, Mac first. A Rust core (`src-tauri/`) keeps the library; the window (`src/`) is plain HTML, CSS and ES modules with foliate-js for reading. There's no frontend build step.
+
+## What works
+
+- **Library** in `~/Books/Nightstand`, filed as `Author/Title.epub`. The database and cover thumbnails are in `.nightstand/` inside it.
+- **Adding books:** drop EPUB files on the window or use Add books. Files are copied in, and the same file twice is spotted.
+- **Grouping:** Reading, Not started and Finished. A book becomes Reading on its first page turn.
+- **Reader:** pages layout, Contents (⌘T), A− / A+ (⌘− / ⌘+, 12–28 pt), Georgia / Charter / San Francisco, and Day / Sepia / Night paper.
+- **Page numbers:** 2,000 characters of text a page, so they don't change with size or window (spikes/pages).
+- **Keeping your place:** the Reader remembers the word you were reading and returns to it after any layout change, and reopens there next time.
+- **Underlines:** select text, then press 1–4 or click the label: Quote, Idea, Question, Disagree. Click an underline to change its label or remove it (⌫).
+- **Underline storage:** each one is stored as a CFI plus its quote, and checked when the book opens. If the words have moved, they're found by the quote and the CFI is updated (spikes/anchors).
+
+Not yet:
+- Notes, Devices, ⌘K, Settings and Edit details.
+- Splitting very large book files. Books with a content file over 300 KB show a note that they may be slow.
+
+## Running
+
+Needs Rust (`rustup`), Node and pnpm.
+
+```
+pnpm install
+pnpm tauri dev                 # run with live reload
+pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstand.app
+```
+
+- **Add books without the window:** `src-tauri/target/debug/nightstand --add a.epub b.epub`.
+
+## Tests
+
+- **Rust:** `cd src-tauri && cargo test` covers EPUB metadata, adding books, and underlines saved across reopening. The book tests use the Gutenberg files in `spikes/azw3/books` when they're there.
+- **The window in a browser:** serve the repo root with `python3 -m http.server`, then open `/app/test/harness.html?fresh`. A stand-in replaces the Rust side.
+- **The real app:** `NIGHTSTAND_SELFTEST=test/selftest.js src-tauri/target/debug/nightstand` runs `test/selftest.js` in the window. It:
+  - opens Middlemarch;
+  - underlines with key 1;
+  - changes the size there and back, then reopens the book;
+  - removes its underline, prints a JSON report and quits.
+
+  This only works in debug builds.
+
+## Layout
+
+- `src-tauri/src/epub.rs` reads title, authors, cover and file sizes from an EPUB.
+- `src-tauri/src/library.rs` handles the library folder and the SQLite database.
+- `src-tauri/src/lib.rs` holds the Tauri commands.
+- `src/app.js` is the library window.
+- `src/reader.js` is the Reader.
+- `src/anchors.js` finds underlined words again.
+- `src/vendor/foliate-js` is foliate-js (MIT), with one small patch described in its `NIGHTSTAND.md`.

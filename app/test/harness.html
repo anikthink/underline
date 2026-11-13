@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- Runs the real frontend in a browser, with the Rust side replaced by an in-memory stand-in.
+     Serve the repo root (python3 -m http.server) and open /app/test/harness.html.
+     Books come from spikes/azw3/books (not in the repo). State is kept in localStorage, so a reload
+     behaves like quitting and reopening the app; add ?fresh to start again. -->
+<meta charset="utf-8"><title>Nightstand harness</title>
+<link rel="stylesheet" href="../src/app.css">
+<script type="module">
+const KEY = 'harness-db', fresh = location.search.includes('fresh')
+const seed = { books: [
+  { id: 1, title: 'Middlemarch', authors: ['George Eliot'], file: 'George Eliot/Middlemarch.epub', src: '../../spikes/azw3/books/pg145.epub', added: 1, cover: null, status: 'Not started', fraction: 0, position: null, sectionChars: null, largestFile: 26000, lastOpened: null },
+  { id: 2, title: "Alice's Adventures in Wonderland", authors: ['Lewis Carroll'], file: 'Lewis Carroll/Alice.epub', src: '../../spikes/azw3/books/pg11.epub', added: 2, cover: null, status: 'Not started', fraction: 0, position: null, sectionChars: null, largestFile: 30000, lastOpened: null }],
+  underlines: [], next: 1 }
+let db; try { db = fresh ? null : JSON.parse(localStorage.getItem(KEY)) } catch {}
+db ??= structuredClone(seed)
+const save = () => localStorage.setItem(KEY, JSON.stringify(db))
+window.CALLS = []
+const handlers = {
+  library_folder: () => '/Users/you/Books/Nightstand',
+  list_books: () => structuredClone(db.books),
+  add_books: () => [],
+  read_book: async ({ id }) => (await fetch(db.books.find(b => b.id === id).src)).arrayBuffer(),
+  save_position: ({ id, cfi, fraction, turned }) => { const b = db.books.find(b => b.id === id); Object.assign(b, { position: cfi, fraction, lastOpened: Date.now() }); if (turned && b.status === 'Not started') b.status = 'Reading' },
+  save_section_chars: ({ id, chars }) => { db.books.find(b => b.id === id).sectionChars = chars },
+  list_underlines: ({ bookId }) => structuredClone(db.underlines.filter(u => u.bookId === bookId)),
+  add_underline: ({ underline }) => { const u = { ...underline, id: db.next++, note: '', created: Date.now() }; db.underlines.push(u); return structuredClone(u) },
+  relabel_underline: ({ id, label }) => { db.underlines.find(u => u.id === id).label = label },
+  move_underline: ({ id, cfi }) => { db.underlines.find(u => u.id === id).cfi = cfi },
+  remove_underline: ({ id }) => { db.underlines = db.underlines.filter(u => u.id !== id) },
+}
+window.__TAURI__ = {
+  core: {
+    invoke: async (cmd, args) => { window.CALLS.push(cmd); const r = await handlers[cmd](args ?? {}); save(); return r },
+    convertFileSrc: p => p,
+  },
+  dialog: { open: async () => null },
+  webview: { getCurrentWebview: () => ({ onDragDropEvent: () => {} }) },
+}
+const html = await (await fetch('../src/index.html')).text()
+document.body.innerHTML = new DOMParser().parseFromString(html, 'text/html').body.innerHTML
+await import('../src/app.js')
+window.READY = true
+</script>
+<body></body>
