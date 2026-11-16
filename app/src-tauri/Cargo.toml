@@ -29,6 +29,7 @@ tempfile = "3"
 libc = "0.2"
 unicode-normalization = "0.1"
 regex = "1"
+ureq = { version = "2", default-features = false, features = ["tls", "gzip"] }
 
 
 [profile.release]

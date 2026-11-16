@@ -41,10 +41,16 @@ Tauri 2, Mac first. A Rust core (`src-tauri/`) keeps the library; the window (`s
   - **Fields:** title, authors, series and number, published, publisher, language, ISBN, shelves, description, status and rating. They're read from the book's file the first time.
   - **Saving:** changes save as you type and ⌘Z undoes. A pencil marks fields you've changed. J/K move to the next or previous book, Esc closes.
   - **Cover:** click it to choose an image.
-  - **Writing the file:** when the panel lets go of a book, its EPUB is rewritten (`src-tauri/src/opf.rs`) and moved to Author/Title.epub if those changed. Only the package file and cover change; chapters are copied untouched, so underlines stay put. The Kindle copy is dropped so the next send has the new details.
-
-Not yet:
-- Edit details from Open Library: search, refresh with a side-by-side comparison, cover choices from its editions, and editing many books at once.
+  - **Writing the file:** when the panel lets go of a book, its EPUB is rewritten (`src-tauri/src/opf.rs`) and moved to Author/Title.epub if those changed. Only the package file and cover change; chapters are copied untouched, so underlines stay put. A book without a cover gets one added. The Kindle copy is dropped so the next send has the new details.
+  - **Find details online:** compares the book with Open Library. Nothing is sent until you press it, and then only the title, first author and ISBN.
+    - **Search:** an ISBN match comes first, then works ranked by how many editions they have, so one-off reprints sink.
+    - **Comparing:** pick an edition (closest to yours first), and each field shows yours beside Open Library's. Take one field or all the differences. ⌘Z undoes. Taken fields are marked Open Library.
+    - **Covers:** the work's covers and its editions' covers. Click one to use it.
+    - **Refresh:** the book remembers which work and edition you took from, so the button becomes Refresh and goes straight to the comparison.
+    - **What can be fetched:** only Open Library's read-only lookups and cover images (`src-tauri/src/online.rs`).
+- **Editing several books together:** ⌘-click or Shift-click covers, then Edit together (⌘I).
+  - **Fields:** status, rating, authors, series (optionally numbered 1, 2, 3… in the order shown), publisher, language and published date. You can also add books to shelves or take them off.
+  - **Applying:** fields left alone stay as each book has them. Apply writes every file, and Undo puts them all back.
 - **Repeated short highlights:** for books Nightstand converted, the words around each Kindle highlight are read from the AZW3's own text near its location, and they pick the right place in the EPUB. On the generated test file that's 247 of 250 on exactly the right words (240 by location alone).
   - The 3 misses are two-word phrases in Middlemarch. That file's locations drift up to 3,500 bytes from the AZW3's real text, because they were generated from KindleUnpack's rebuilt pages. A real Kindle counts the AZW3's own text, so a real My Clippings.txt is the check.
   - Highlights in books bought from Amazon still use location alone.
@@ -69,6 +75,7 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
 ## Tests
 
 - **Rust:** `cd src-tauri && cargo test` covers EPUB metadata, adding books, and underlines saved across reopening. The book tests use the Gutenberg files in `spikes/azw3/books` when they're there.
+- **Open Library:** `node test/online-test.mjs` runs `src/online.js` against the live site: Middlemarch by title, Pride and Prejudice by ISBN, and a made-up book.
 - **The window in a browser:** serve the repo root with `python3 -m http.server`, then open `/app/test/harness.html?fresh` (add `&page=settings` for the Settings window). A stand-in replaces the Rust side.
 - **The real app:** `NIGHTSTAND_SELFTEST=test/selftest.js src-tauri/target/debug/nightstand` runs `test/selftest.js` in the window. It:
   - opens Middlemarch;
@@ -78,6 +85,8 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
   - removes its underline, prints a JSON report and quits.
 
   `test/details-selftest.js` edits Middlemarch, sets a cover and checks the file is rewritten; run it with `NIGHTSTAND_LIBRARY` pointing at a copy of the library and `NIGHTSTAND_COVER_TEST` at an image.
+
+  `test/online-selftest.js` finds Alice on Open Library through the Rust side, takes the publisher and a cover, and checks the file; `test/many-selftest.js` numbers two books as a series, applies and undoes. Both run on a copy of the library too.
 
   `test/devices-selftest.js` does the same for Devices, with `NIGHTSTAND_VOLUMES` pointing at a folder of pretend devices (a `Kindle` folder with `documents/`, `system/` and a My Clippings.txt, and a `KOBOeReader` folder with `.kobo/KoboReader.sqlite`).
 
@@ -97,7 +106,7 @@ pnpm tauri build --bundles app # src-tauri/target/release/bundle/macos/Nightstan
 - `src/palette.js` is ⌘K.
 - `src/settings.html` and `src/settings.js` are the Settings window.
 - `src/store.js` holds settings shared between the windows.
-- `src/details.js` is Edit details.
+- `src/details.js` is Edit details. `src/online.js` and `src-tauri/src/online.rs` are Find details online.
 - `src/devices.js` and `src-tauri/src/devices.rs` are Devices. `converter/` is the EPUB-to-AZW3 helper.
 - `src-tauri/src/notes.rs` handles Markdown export.
 - `src/vendor/foliate-js` is foliate-js (MIT), with one small patch described in its `NIGHTSTAND.md`.

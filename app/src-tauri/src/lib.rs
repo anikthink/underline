@@ -2,6 +2,7 @@ mod devices;
 mod epub;
 mod library;
 mod notes;
+mod online;
 mod opf;
 
 use library::{Added, Book, Library, Note, Underline};
@@ -366,6 +367,19 @@ fn set_cover(lib: Lib, id: i64, path: PathBuf) -> Result<(), String> {
     lib.lock().unwrap().set_cover(id, &path)
 }
 
+/// Find details online (src/online.js): one Open Library lookup, off the main thread.
+#[tauri::command]
+async fn online_get(path: String) -> Result<serde_json::Value, String> {
+    online::get(&path)
+}
+
+/// Use an Open Library cover: downloaded now, written into the file on commit like any chosen cover.
+#[tauri::command]
+async fn online_cover(lib: Lib<'_>, id: i64, cover_id: i64) -> Result<(), String> {
+    let bytes = online::cover(cover_id)?;
+    lib.lock().unwrap().set_cover_bytes(id, &bytes)
+}
+
 /// Write the details into the book's file. Runs off the main thread: a big EPUB takes a moment.
 #[tauri::command]
 async fn commit_details(lib: Lib<'_>, id: i64) -> Result<Book, String> {
@@ -476,6 +490,8 @@ pub fn run() {
             book_details,
             update_details,
             set_cover,
+            online_get,
+            online_cover,
             commit_details,
             list_devices,
             device_contents,

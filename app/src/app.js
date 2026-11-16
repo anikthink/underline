@@ -3,7 +3,7 @@ import { openReader, closeReader, reader } from './reader.js'
 import { initNotes, loadNotes, notesCount, renderNotes, notesTools, notesKey, revisitCard, allNotes, focusNote, focusBook } from './notes.js'
 import { initPalette, openPalette, paletteOpen } from './palette.js'
 import { loadSettings, setting } from './store.js'
-import { initDetails, openDetails, detailsKey, detailsOpen, detailsBook } from './details.js'
+import { initDetails, openDetails, openMany, closeDetails, detailsKey, detailsOpen, detailsBook, detailsMany } from './details.js'
 import { initDevices, deviceSidebar, deviceFilter, deviceTools, renderDevice, connected } from './devices.js'
 
 const { invoke, convertFileSrc } = window.__TAURI__.core
@@ -14,6 +14,8 @@ const STATUSES = ['Reading', 'Not started', 'Finished']
 // covers come as "path#version"; the version goes in the query so a changed cover isn't served from cache
 export const coverSrc = c => { const [p, v] = c.split('#'); return `${convertFileSrc(p)}?v=${v ?? ''}` }
 let books = [], filter = 'All books'
+// books picked with ⌘-click or Shift-click, to edit together
+let selected = new Set(), anchor = null
 
 async function load() {
   [books] = await Promise.all([invoke('list_books'), loadNotes()])
@@ -49,10 +51,33 @@ function render() {
   $('shelf').innerHTML = groups.map(([s, list]) => `
     <div class="grp">${s}<span class="n">${list.length}</span></div>
     <div class="grid">${list.map(card).join('')}</div>`).join('')
+  drawSelbar()
+}
+
+function drawSelbar() {
+  const n = selected.size, bar = $('selbar')
+  bar.hidden = n < 2 || detailsMany()
+  if (!bar.hidden) bar.innerHTML = `<span>${n} books selected</span><button class="btn pri" data-act="edit-many">Edit together <kbd>⌘I</kbd></button><button class="lnk" data-act="clear-sel">Clear</button>`
+}
+
+const order = () => [...document.querySelectorAll('#shelf .bk[data-id]')].map(x => +x.dataset.id)
+function clearSelection() { selected.clear(); anchor = null; document.querySelectorAll('.bk.sel').forEach(x => x.classList.remove('sel')); drawSelbar() }
+
+// ⌘-click adds or removes a book; Shift-click takes everything between it and the last one clicked
+function pick(id, e) {
+  if (!selected.size && detailsBook() != null && !detailsMany()) selected.add(detailsBook())
+  if (e.shiftKey && anchor != null) {
+    const o = order(), [a, b] = [o.indexOf(anchor), o.indexOf(id)].sort((x, y) => x - y)
+    o.slice(a, b + 1).forEach(x => selected.add(x))
+  } else { selected.has(id) ? selected.delete(id) : selected.add(id); anchor = id }
+  document.querySelectorAll('#shelf .bk[data-id]').forEach(x => x.classList.toggle('sel', selected.has(+x.dataset.id)))
+  // with the panel open it follows the selection
+  if (detailsOpen()) { if (selected.size >= 2) openMany([...selected]); else if (selected.size === 1) openDetails([...selected][0]) }
+  drawSelbar()
 }
 
 const card = b => `
-  <button class="bk" data-id="${b.id}" title="${esc(b.title)}">
+  <button class="bk ${selected.has(b.id) ? 'sel' : ''}" data-id="${b.id}" title="${esc(b.title)}">
     <div class="cv">${b.cover ? `<img src="${coverSrc(b.cover)}" alt="" loading="lazy">` : `<div class="ph">${esc(b.title)}<small>${esc(b.authors[0])}</small></div>`}
       ${b.fraction > 0 ? `<div class="pr" style="width:${Math.round(b.fraction * 100)}%"></div>` : ''}<span class="bk-edit" data-edit="${b.id}" role="button" title="Edit details (⌘I)">Edit</span></div>
     <div class="t">${esc(b.title)}</div><div class="a">${esc(b.authors.join(', ') || 'Unknown author')}</div>
@@ -89,8 +114,13 @@ async function chooseFiles() {
 document.addEventListener('click', e => {
   const f = e.target.closest('[data-f]'); if (f) { filter = f.dataset.f; render() }
   if (e.target.closest('#add, [data-add]')) chooseFiles()
-  const ed = e.target.closest('[data-edit]'); if (ed) return openDetails(+ed.dataset.edit)
-  const b = e.target.closest('.bk[data-id]'); if (b) detailsOpen() ? openDetails(+b.dataset.id) : open(+b.dataset.id)
+  if (e.target.closest('[data-act="edit-many"]')) return openMany([...selected]).then(drawSelbar)
+  if (e.target.closest('[data-act="clear-sel"]')) return clearSelection()
+  const ed = e.target.closest('[data-edit]')
+  if (ed && !(e.metaKey || e.shiftKey)) { if (selected.size >= 2 && selected.has(+ed.dataset.edit)) return openMany([...selected]).then(drawSelbar); clearSelection(); return openDetails(+ed.dataset.edit) }
+  const b = e.target.closest('.bk[data-id]')
+  if (b && (e.metaKey || e.shiftKey)) return pick(+b.dataset.id, e)
+  if (b) { clearSelection(); detailsOpen() ? openDetails(+b.dataset.id) : open(+b.dataset.id) }
 })
 
 async function open(id, target) {
@@ -143,6 +173,8 @@ document.addEventListener('mouseover', e => { const b = e.target.closest?.('.bk[
 document.addEventListener('keydown', e => {
   if (paletteOpen()) return
   if (!$('library').hidden && detailsKey(e)) return
+  if (e.metaKey && e.key === 'i' && !$('library').hidden && selected.size >= 2) { openMany([...selected]).then(drawSelbar); return e.preventDefault() }
+  if (e.key === 'Escape' && selected.size && !$('library').hidden && !detailsOpen()) { clearSelection(); return e.preventDefault() }
   if (e.metaKey && e.key === 'i' && !$('library').hidden) { const id = hovered ?? detailsBook() ?? books[0]?.id; if (id != null) openDetails(id); return e.preventDefault() }
   if (e.metaKey && ['k', ',', 'o'].includes(e.key)) { shortcut(e.key); return e.preventDefault() }
   if ($('library').hidden || e.target.closest?.('input, textarea, .sheet')) return
@@ -162,7 +194,7 @@ initDevices({ filter: () => filter, go, render, books: () => books, toast, reloa
 initDetails({
   toast, reload: load, coverSrc,
   changed: b => { const i = books.findIndex(x => x.id === b.id); if (i >= 0) books[i] = { ...books[i], ...b }; render() },
-  // J and K follow the order on screen
-  order: () => [...document.querySelectorAll('#shelf .bk[data-id]')].map(x => +x.dataset.id),
+  // J and K follow the order on screen, and so does numbering a series
+  order, clearSelection,
 })
 if (setting('open_at') === 'book') { const last = books.filter(b => b.lastOpened).sort((a, b) => b.lastOpened - a.lastOpened)[0]; if (last) open(last.id) }

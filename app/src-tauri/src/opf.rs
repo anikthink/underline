@@ -111,6 +111,14 @@ pub fn rewrite(epub_bytes: &[u8], d: &FileDetails, cover: Option<&[u8]>) -> Resu
         (Some(img), Some(path)) => Some(encode_like(img, path)?),
         _ => None,
     };
+    // a book without a cover gets one: a JPEG beside the package file, listed in the manifest
+    let added_cover = match (cover, &meta.cover_path) {
+        (Some(img), None) => {
+            let dir = meta.opf_path.rfind('/').map(|i| &meta.opf_path[..=i]).unwrap_or("");
+            Some((format!("{dir}nightstand-cover.jpg"), encode_like(img, "cover.jpg")?))
+        }
+        _ => None,
+    };
     for i in 0..zip.len() {
         let mut f = zip.by_index(i).map_err(|e| e.to_string())?;
         let name = f.name().to_string();
@@ -120,7 +128,11 @@ pub fn rewrite(epub_bytes: &[u8], d: &FileDetails, cover: Option<&[u8]>) -> Resu
         let mut data = Vec::with_capacity(f.size() as usize);
         f.read_to_end(&mut data).map_err(|e| e.to_string())?;
         if name == meta.opf_path {
-            data = rewrite_opf(&String::from_utf8_lossy(&data), d).into_bytes();
+            let mut opf = rewrite_opf(&String::from_utf8_lossy(&data), d);
+            if added_cover.is_some() {
+                opf = add_cover_item(&opf);
+            }
+            data = opf.into_bytes();
         } else if Some(&name) == meta.cover_path.as_ref() {
             if let Some(c) = &new_cover {
                 data = c.clone();
@@ -129,7 +141,22 @@ pub fn rewrite(epub_bytes: &[u8], d: &FileDetails, cover: Option<&[u8]>) -> Resu
         out.start_file(name, deflated).map_err(|e| e.to_string())?;
         out.write_all(&data).map_err(|e| e.to_string())?;
     }
+    if let Some((name, img)) = added_cover {
+        out.start_file(name, deflated).map_err(|e| e.to_string())?;
+        out.write_all(&img).map_err(|e| e.to_string())?;
+    }
     Ok(out.finish().map_err(|e| e.to_string())?.into_inner())
+}
+
+/// List nightstand-cover.jpg in the manifest, marked as the cover both the EPUB 3 and the EPUB 2 way.
+fn add_cover_item(opf: &str) -> String {
+    let version3 = Regex::new(r#"<(?:opf:)?package\b[^>]*\bversion="3"#).unwrap().is_match(opf);
+    let props = if version3 { r#" properties="cover-image""# } else { "" };
+    let item = format!(r#"<item id="nightstand-cover" href="nightstand-cover.jpg" media-type="image/jpeg"{props}/>"#);
+    let re_manifest = Regex::new(r"(<(?:opf:)?manifest\b[^>]*>)").unwrap();
+    let opf = re_manifest.replacen(opf, 1, |c: &regex::Captures| format!("{}\n    {item}", &c[1])).into_owned();
+    let re_meta_end = Regex::new(r"(</(?:opf:)?metadata>)").unwrap();
+    re_meta_end.replacen(&opf, 1, |c: &regex::Captures| format!("  <meta name=\"cover\" content=\"nightstand-cover\"/>\n  {}", &c[1])).into_owned()
 }
 
 /// The chosen image, re-encoded in the format the book's cover file already has (so its manifest entry stays right)
@@ -201,5 +228,34 @@ mod tests {
         z2.by_name(&m.opf_path).unwrap().read_to_string(&mut opf2).unwrap();
         assert_eq!(opf2.matches("<dc:title>").count(), 1);
         assert_eq!(opf2.matches("calibre:series\"").count(), 1);
+    }
+
+    #[test]
+    fn gives_a_coverless_book_a_cover() {
+        let mut z = ZipWriter::new(Cursor::new(Vec::new()));
+        let o = SimpleFileOptions::default();
+        z.start_file("mimetype", o).unwrap();
+        z.write_all(b"application/epub+zip").unwrap();
+        z.start_file("META-INF/container.xml", o).unwrap();
+        z.write_all(br#"<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>"#).unwrap();
+        z.start_file("OPS/book.opf", o).unwrap();
+        z.write_all(br#"<?xml version="1.0"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="u"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="u">x</dc:identifier><dc:title>Plain</dc:title></metadata><manifest><item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/></manifest><spine><itemref idref="c1"/></spine></package>"#).unwrap();
+        z.start_file("OPS/c1.xhtml", o).unwrap();
+        z.write_all(b"<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p>Hi</p></body></html>").unwrap();
+        let bytes = z.finish().unwrap().into_inner();
+        assert!(epub::read(Cursor::new(&bytes)).unwrap().cover.is_none());
+        let mut png = Cursor::new(vec![]);
+        image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(40, 60, image::Rgb([10, 90, 10]))).write_to(&mut png, image::ImageFormat::Png).unwrap();
+        let d = FileDetails { title: "Plain".into(), authors: vec!["A. Writer".into()], ..Default::default() };
+        let out = rewrite(&bytes, &d, Some(&png.into_inner())).unwrap();
+        let m = epub::read(Cursor::new(&out)).unwrap();
+        assert_eq!(m.cover_path.as_deref(), Some("OPS/nightstand-cover.jpg"));
+        let c = image::load_from_memory(m.cover.as_ref().unwrap()).unwrap();
+        assert_eq!((c.width(), c.height()), (40, 60));
+        // a second cover replaces the first instead of adding another
+        let again = rewrite(&out, &d, Some(m.cover.as_ref().unwrap())).unwrap();
+        let mut opf = String::new();
+        ZipArchive::new(Cursor::new(&again)).unwrap().by_name("OPS/book.opf").unwrap().read_to_string(&mut opf).unwrap();
+        assert_eq!(opf.matches("nightstand-cover.jpg").count(), 1);
     }
 }

@@ -384,7 +384,11 @@ impl Library {
 
     /// Use an image as the book's cover: the thumbnail changes now, the file's cover on commit.
     pub fn set_cover(&self, id: i64, image: &Path) -> Result<(), String> {
-        let bytes = std::fs::read(image).map_err(|e| e.to_string())?;
+        self.set_cover_bytes(id, &std::fs::read(image).map_err(|e| e.to_string())?)
+    }
+
+    pub fn set_cover_bytes(&self, id: i64, bytes: &[u8]) -> Result<(), String> {
+        let bytes = bytes.to_vec();
         save_thumbnail(&bytes, &self.cover_path(id))?;
         let pending = self.folder.join(format!(".nightstand/covers/{id}-new"));
         std::fs::write(&pending, &bytes).map_err(|e| e.to_string())?;
